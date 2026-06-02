@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+.env
+
+# profiler output
+*.svg
+*.speedscope.json
+*.qdrep
+*.nsys-rep
+*.sqlite
+
+# asv
+.asv/
+results/raw/
+
+# data — never commit SAR data
+*.SAFE/
+*.h5
+*.nc
+*.tif
+*.tiff
+*.zip
