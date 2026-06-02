@@ -16,7 +16,9 @@ third-party-projects/dolphin/                 # upstream clone
 ├── CLAUDE.md                                 # project context for Claude sessions (excluded)
 └── dolphin-benchmark/                        # THIS repo (excluded)
     ├── .git/
+    ├── Makefile                              # one-command reproduction (`make help`)
     ├── docker/                               # GPU-enabled dev container (CUDA + JAX-GPU)
+    ├── scripts/                              # data download + setup utilities
     ├── benchmarks/                           # scratch/experiment scripts (PRs go upstream)
     └── results/                              # profile output, benchmark numbers, charts
 ```
@@ -101,16 +103,31 @@ the compose-time path substitution and the in-container environment. Required va
 | `DATA_DIR` | host path to raw Sentinel-1 SAFE tree (mounted `/data` ro) |
 | `OPERA_CSLC_DIR` | host path where downloaded OPERA CSLCs go (mounted `/cslc` rw) |
 
-### First-time build and interactive shell
+### Reproducing the setup (via `make`)
+
+The repo root has a `Makefile` that wraps the common operations. `make help`
+lists everything; the typical sequence is:
+
+```bash
+make build                       # build the GPU dev image (~5–10 min first time)
+make check-gpu                   # verify nvidia-smi + JAX backend=gpu
+make download-cslc-tutorial      # ~30–40 CSLCs, ~10 GB, ~30 min on first run
+make shell                       # interactive dev shell
+```
+
+All targets run inside the dev container via `docker/run.sh`. The downloader
+([`scripts/download_cslc.py`](scripts/download_cslc.py)) is idempotent —
+re-running skips files already on disk.
+
+### First-time build and interactive shell (raw equivalent)
 
 ```bash
 cd dolphin-benchmark/docker
 ./run.sh
 ```
 
-This builds the image (5–10 min first time, cached afterwards) and drops into an interactive
-shell with `/dolphin` editable-installed and JAX configured for GPU. The banner reports the
-GPU and JAX backend so you can verify GPU is actually in use.
+Same effect as `make shell`. The banner reports the GPU and JAX backend so
+you can verify GPU is actually in use.
 
 ### Override mount paths ad-hoc
 
