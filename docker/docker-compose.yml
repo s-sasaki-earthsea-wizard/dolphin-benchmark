@@ -1,8 +1,11 @@
-# Run from this directory: `docker compose run --rm dev`
+# Run via `./run.sh`. The wrapper supplies `--env-file ../.env` so values from
+# the repo-root .env feed BOTH compose-time path substitution AND the in-container
+# environment. If you invoke `docker compose` directly, add `--env-file ../.env`.
 #
-# Paths in volumes are resolved relative to THIS file.
-# Override the bind targets via .env or by exporting before invocation:
-#   DOLPHIN_SRC=/path/to/clone DATA_DIR=/path/to/safe docker compose run --rm dev
+# User-specific paths (DATA_DIR, OPERA_CSLC_DIR, ASF_USERNAME/ASF_PASSWORD) live
+# in .env (gitignored) — see .env.example for the expected variables.
+# Anything that is *not* user-specific (e.g. DOLPHIN_SRC defaulting to ../..)
+# may have a default here.
 
 services:
   dev:
@@ -36,12 +39,11 @@ services:
       - "${DOLPHIN_SRC:-../..}:/dolphin:rw"
       # this benchmark repo (rw, for results and scratch).
       - "..:/dolphin-benchmark:rw"
-      # SAR test data (ro by default — never accidentally write here).
-      - "${DATA_DIR:-/mnt/nas/Projects/atlike/sentinel-1-data}:/data:ro"
-      # OPERA CSLC tutorial dataset (rw). Downloads land here so they
-      # persist across container restarts. Defaults to a writable
-      # subdirectory of the host SAR data tree.
-      - "${OPERA_CSLC_DIR:-/mnt/nas/Projects/atlike/sentinel-1-data/opera-cslc-tutorial}:/cslc:rw"
+      # SAR test data (ro). Set DATA_DIR in .env to your raw SAFE tree.
+      - "${DATA_DIR:?DATA_DIR not set — copy .env.example to .env and fill it in}:/data:ro"
+      # OPERA CSLC tutorial dataset (rw). Downloads land here so they persist
+      # across container restarts. Set OPERA_CSLC_DIR in .env.
+      - "${OPERA_CSLC_DIR:?OPERA_CSLC_DIR not set — copy .env.example to .env and fill it in}:/cslc:rw"
       # Per-run scratch (defaults to ../results on host).
       - "../results:/work:rw"
     working_dir: /work

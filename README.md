@@ -83,6 +83,24 @@ A GPU-enabled container is defined under [`docker/`](docker/). It:
 - Docker with `nvidia-container-toolkit` and the `nvidia` runtime registered
   (`docker info | grep -i runtime` should mention `nvidia`)
 
+### Setup `.env`
+
+Required before first run:
+
+```bash
+cp .env.example .env
+$EDITOR .env   # fill in ASF credentials and absolute paths
+```
+
+`.env` lives at the repo root (next to this README), is gitignored, and is read by both
+the compose-time path substitution and the in-container environment. Required variables:
+
+| Variable | Purpose |
+|---|---|
+| `ASF_USERNAME` / `ASF_PASSWORD` | NASA Earthdata login for `opera_utils.download` |
+| `DATA_DIR` | host path to raw Sentinel-1 SAFE tree (mounted `/data` ro) |
+| `OPERA_CSLC_DIR` | host path where downloaded OPERA CSLCs go (mounted `/cslc` rw) |
+
 ### First-time build and interactive shell
 
 ```bash
@@ -94,11 +112,15 @@ This builds the image (5–10 min first time, cached afterwards) and drops into 
 shell with `/dolphin` editable-installed and JAX configured for GPU. The banner reports the
 GPU and JAX backend so you can verify GPU is actually in use.
 
-### Override mount paths
+### Override mount paths ad-hoc
 
 ```bash
-DOLPHIN_SRC=/other/clone DATA_DIR=/other/safe ./run.sh
+DOLPHIN_SRC=/other/clone ./run.sh
 ```
+
+This works for variables that *aren't* user-specific. User-specific paths
+(`DATA_DIR`, `OPERA_CSLC_DIR`) must come from `.env` — there are no
+hardcoded defaults in the compose file.
 
 ### One-shot invocations
 
