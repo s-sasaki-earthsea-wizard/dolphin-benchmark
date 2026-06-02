@@ -25,6 +25,12 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    # ASF / NASA Earthdata credentials are passed in via .env at the
+    # repo root (NOT in this directory). env_file loads values as-is —
+    # no shell interpolation — so passwords with $ or other special chars
+    # are safe. .env is git-ignored; do not commit it.
+    env_file:
+      - ../.env
     volumes:
       # dolphin source (rw, for `pip install -e .` and source edits).
       - "${DOLPHIN_SRC:-../..}:/dolphin:rw"
@@ -32,6 +38,10 @@ services:
       - "..:/dolphin-benchmark:rw"
       # SAR test data (ro by default — never accidentally write here).
       - "${DATA_DIR:-/mnt/nas/Projects/atlike/sentinel-1-data}:/data:ro"
+      # OPERA CSLC tutorial dataset (rw). Downloads land here so they
+      # persist across container restarts. Defaults to a writable
+      # subdirectory of the host SAR data tree.
+      - "${OPERA_CSLC_DIR:-/mnt/nas/Projects/atlike/sentinel-1-data/opera-cslc-tutorial}:/cslc:rw"
       # Per-run scratch (defaults to ../results on host).
       - "../results:/work:rw"
     working_dir: /work
@@ -47,6 +57,7 @@ services:
         echo 'dolphin source: /dolphin (editable)' &&
         echo 'benchmark repo: /dolphin-benchmark' &&
         echo 'data (ro):      /data' &&
+        echo 'cslc (rw):      /cslc' &&
         echo 'workdir:        /work' &&
         echo &&
         nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | sed 's/^/GPU: /' &&

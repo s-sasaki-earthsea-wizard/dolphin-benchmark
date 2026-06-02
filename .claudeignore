@@ -1,0 +1,3 @@
+# Files Claude should never read or display.
+# Behavior is best-effort on Claude's side; not all clients honor this file.
+.env
