@@ -1,0 +1,37 @@
+# Snapshot of dolphin/conda-env.yml.
+# Kept here so the Docker build context stays small (no need to use dolphin/
+# as the build context).
+#
+# Sync procedure: diff against ../dolphin/conda-env.yml whenever the upstream
+# clone is updated, and bump this snapshot if relevant changes appear.
+# Last synced: 2026-06-02 against commit 7a59f71
+
+name: dolphin-env
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.9
+  - pip>=21.3
+  - git
+  - gdal>=3.3
+  - libgdal-netcdf
+  - libgdal-hdf5
+  - h5py>=3.6
+  - hdf5!=1.12.2
+  # NOTE: jax intentionally omitted here vs. upstream conda-env.yml.
+  # conda-forge currently ships an incompatible (jax, jaxlib) pair, and a
+  # subsequent `pip install jax[cuda12]` fails because conda's jaxlib has no
+  # RECORD file (pip can't uninstall it). We install jax + CUDA wheels via pip
+  # in the next step of the Dockerfile, which covers both runtime and GPU.
+  - numba>=0.56
+  - numpy>=1.23
+  - opera-utils>=0.4.1
+  - pydantic>=2.1
+  - pyproj>=3.3
+  - rasterio>=1.3
+  - ruamel.yaml>=0.15
+  - scipy>=1.12
+  - threadpoolctl>=3.0
+  - tqdm>=4.60
+  - typing_extensions>=3.10
+  - tyro>=0.9.20

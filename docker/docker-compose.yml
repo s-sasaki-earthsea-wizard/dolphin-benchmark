@@ -1,0 +1,55 @@
+# Run from this directory: `docker compose run --rm dev`
+#
+# Paths in volumes are resolved relative to THIS file.
+# Override the bind targets via .env or by exporting before invocation:
+#   DOLPHIN_SRC=/path/to/clone DATA_DIR=/path/to/safe docker compose run --rm dev
+
+services:
+  dev:
+    image: dolphin-benchmark:gpu
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Match host UID/GID so files created in mounts stay owner-correct.
+        USER_ID: "${USER_ID:-1000}"
+        GROUP_ID: "${GROUP_ID:-1000}"
+        # Bump these to pick a different CUDA / Ubuntu base.
+        CUDA_VERSION: "12.6.3"
+        UBUNTU_VERSION: "22.04"
+    # GPU passthrough — requires nvidia-container-toolkit on the host.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      # dolphin source (rw, for `pip install -e .` and source edits).
+      - "${DOLPHIN_SRC:-../..}:/dolphin:rw"
+      # this benchmark repo (rw, for results and scratch).
+      - "..:/dolphin-benchmark:rw"
+      # SAR test data (ro by default — never accidentally write here).
+      - "${DATA_DIR:-/mnt/nas/Projects/atlike/sentinel-1-data}:/data:ro"
+      # Per-run scratch (defaults to ../results on host).
+      - "../results:/work:rw"
+    working_dir: /work
+    # tty + stdin for interactive shell; -i compose flag also needed (see README).
+    tty: true
+    stdin_open: true
+    # Editable install runs once per container start. Fast no-op after the first time
+    # because pip detects no changes.
+    command: >
+      bash -lc "
+        pip install --no-deps --quiet -e /dolphin &&
+        echo '--- dolphin-benchmark dev shell ---' &&
+        echo 'dolphin source: /dolphin (editable)' &&
+        echo 'benchmark repo: /dolphin-benchmark' &&
+        echo 'data (ro):      /data' &&
+        echo 'workdir:        /work' &&
+        echo &&
+        nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | sed 's/^/GPU: /' &&
+        python -c 'import jax; print(\"JAX backend:\", jax.default_backend(), \"devices:\", jax.devices())' &&
+        exec bash -l
+      "

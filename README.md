@@ -16,7 +16,8 @@ third-party-projects/dolphin/                 # upstream clone
 ├── CLAUDE.md                                 # project context for Claude sessions (excluded)
 └── dolphin-benchmark/                        # THIS repo (excluded)
     ├── .git/
-    ├── benchmarks/                           # draft ASV-compatible benchmark scripts
+    ├── docker/                               # GPU-enabled dev container (CUDA + JAX-GPU)
+    ├── benchmarks/                           # scratch/experiment scripts (PRs go upstream)
     └── results/                              # profile output, benchmark numbers, charts
 ```
 
@@ -51,10 +52,12 @@ Details and progress are tracked on
 ## Existing benchmark infra in dolphin
 
 dolphin already ships ASV (`asv.conf.json` + `benchmarks/benchmarks.py`). `CovarianceBenchmark`
-is the established pattern; new benchmarks should follow it.
+is the established pattern; new benchmarks for Goldstein / PS detection are added directly to
+that file (and become part of the upstream PR). This is intentional: it keeps the maintainer's
+review experience aligned — one set of benchmarks, one ASV invocation.
 
-This sibling repo's `benchmarks/` is for **drafts and experiments** before they are merged into
-dolphin's own `benchmarks/benchmarks.py` as part of a PR.
+This sibling repo's `benchmarks/` directory is reserved for one-off experiments and scratch
+work that *won't* go upstream (e.g. exploratory profiling scripts, comparison harnesses).
 
 ## Profiling tools
 
@@ -63,3 +66,52 @@ dolphin's own `benchmarks/benchmarks.py` as part of a PR.
 | py-spy | exploration | confirm hotspots on a real end-to-end workflow |
 | Nsight Systems (nsys) | post-GPU-rewrite | inspect CUDA kernel time, H↔D transfers, cuFFT cost |
 | ASV | PR evidence | reproducible before/after numbers |
+
+## Dev environment (Docker)
+
+A GPU-enabled container is defined under [`docker/`](docker/). It:
+
+- builds on `nvidia/cuda:12.6.3-devel-ubuntu22.04` (Nsight Systems CLI included)
+- creates a conda env matching dolphin's `conda-env.yml`
+- installs `jax[cuda12]`, `asv`, `py-spy`, `pynvml` on top
+- mounts the host's `dolphin/` clone as `/dolphin` and `pip install -e .` on container start,
+  so source edits to dolphin are picked up live without rebuilds
+
+### Host prerequisites
+
+- NVIDIA driver supporting CUDA 12.x
+- Docker with `nvidia-container-toolkit` and the `nvidia` runtime registered
+  (`docker info | grep -i runtime` should mention `nvidia`)
+
+### First-time build and interactive shell
+
+```bash
+cd dolphin-benchmark/docker
+./run.sh
+```
+
+This builds the image (5–10 min first time, cached afterwards) and drops into an interactive
+shell with `/dolphin` editable-installed and JAX configured for GPU. The banner reports the
+GPU and JAX backend so you can verify GPU is actually in use.
+
+### Override mount paths
+
+```bash
+DOLPHIN_SRC=/other/clone DATA_DIR=/other/safe ./run.sh
+```
+
+### One-shot invocations
+
+```bash
+./run.sh asv run --quick
+./run.sh py-spy record -o /work/profile.svg -- dolphin run /work/config.yaml
+./run.sh nsys profile -o /work/run python -m my_bench
+```
+
+### Notes
+
+- `XLA_PYTHON_CLIENT_PREALLOCATE=false` is set in the image to avoid pre-allocating 75% of GPU
+  memory. Unset (or set to `true`) for max throughput when not sharing the GPU.
+- The `docker/conda-env.yml` is a snapshot of `../dolphin/conda-env.yml` — sync date is noted
+  in the file header. Diff and update when upstream changes its deps.
+- `/data` is mounted read-only on purpose. Write results to `/work` (host: `results/`).

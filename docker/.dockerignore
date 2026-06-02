@@ -1,0 +1,4 @@
+# Keep the build context tiny — only the Dockerfile and conda-env.yml are needed.
+*
+!Dockerfile
+!conda-env.yml
