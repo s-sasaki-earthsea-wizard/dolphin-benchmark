@@ -118,15 +118,26 @@ def main() -> int:
 
 
 def _size_mb(result) -> float:
-    """Extract per-file size in MB from asf_search result metadata."""
+    """Extract the H5 data file's size in MB from asf_search result metadata.
+
+    Recent asf_search nests bytes per-file:
+        {'<name>.h5': {'bytes': 273737588, 'format': 'HDF5'},
+         '<name>.iso.xml': {'bytes': 221703, 'format': 'XML'}}
+    We pull the entry whose format is HDF5 (falling back to the largest).
+    """
     b = result.properties.get("bytes")
-    if isinstance(b, dict):
-        # newer asf_search nests the data product size under a key
-        b = b.get("bytes") or next(iter(b.values()), 0)
-    try:
+    if isinstance(b, (int, float)):
         return float(b) / 1024 / 1024
-    except (TypeError, ValueError):
+    if not isinstance(b, dict):
         return 0.0
+    candidates = []
+    for entry in b.values():
+        if isinstance(entry, dict) and isinstance(entry.get("bytes"), (int, float)):
+            candidates.append((entry.get("format") == "HDF5", entry["bytes"]))
+    if not candidates:
+        return 0.0
+    candidates.sort(reverse=True)  # HDF5 first, then largest
+    return float(candidates[0][1]) / 1024 / 1024
 
 
 if __name__ == "__main__":
