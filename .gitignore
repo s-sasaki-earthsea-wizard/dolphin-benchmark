@@ -13,7 +13,14 @@ __pycache__/
 
 # asv
 .asv/
-results/raw/
+
+# run scratch: the container's /work mount (../results). Holds logs, intermediate
+# rasters, run-subset/ outputs, *.nsys-rep, gpu probes — all regenerable.
+/results/
+
+# ...but curated report artifacts under reports/ ARE tracked, including the flame
+# graph SVG that the global "*.svg" rule above would otherwise drop.
+!reports/*.svg
 
 # data — never commit SAR data
 *.SAFE/

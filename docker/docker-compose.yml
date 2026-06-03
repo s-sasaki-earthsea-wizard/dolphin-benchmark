@@ -20,6 +20,11 @@ services:
         # Bump these to pick a different CUDA / Ubuntu base.
         CUDA_VERSION: "12.6.3"
         UBUNTU_VERSION: "22.04"
+    # CAP_SYS_PTRACE lets py-spy attach to the profiled process (and its
+    # --subprocesses children) inside the container. Docker's default cap set
+    # omits it, which makes py-spy fail with "Operation not permitted".
+    cap_add:
+      - SYS_PTRACE
     # GPU passthrough — requires nvidia-container-toolkit on the host.
     deploy:
       resources:
