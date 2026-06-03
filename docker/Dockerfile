@@ -32,6 +32,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         sudo \
     && rm -rf /var/lib/apt/lists/*
 
+# Nsight Systems CLI for GPU-timeline profiling. The CUDA *devel* image only
+# ships a non-functional nsys stub bundled inside nsight-compute
+# (/opt/nvidia/nsight-compute/.../nsys -> "option is ambiguous" on every run).
+# Install the real standalone package from the already-configured CUDA apt repo;
+# it lands at /opt/nvidia/nsight-systems/2024.5.1/bin/nsys with a
+# /usr/local/bin/nsys symlink.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        nsight-systems-2024.5.1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install micromamba (same approach as upstream Dockerfile, but unpinned to keep updating easy).
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
@@ -60,6 +70,15 @@ RUN micromamba create -n dolphin-env -y -f /tmp/conda-env.yml \
 # Make the conda env the default shell environment.
 SHELL ["/bin/bash", "-lc"]
 ENV CONDA_DEFAULT_ENV=dolphin-env
+
+# We set up the env via PATH instead of `conda activate`, so conda's
+# activate.d hooks (proj4-activate.sh, gdal-activate.sh) never run and
+# PROJ_DATA / GDAL_DATA stay unset. libgdal then fails to open its PROJ
+# database ("proj_create_from_database: Open of .../share/proj failed"),
+# which breaks interferogram stitching (gdal_merge.py). Set them explicitly.
+ENV PROJ_DATA=/opt/conda/envs/dolphin-env/share/proj \
+    PROJ_LIB=/opt/conda/envs/dolphin-env/share/proj \
+    GDAL_DATA=/opt/conda/envs/dolphin-env/share/gdal
 
 # JAX with CUDA 12 support (pip — conda-forge jax has no CUDA wheels).
 # `--upgrade` overrides the CPU-only jax pulled in by conda-forge with the
