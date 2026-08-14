@@ -66,3 +66,35 @@ check-gpu:  ## Verify GPU passthrough and JAX backend.
 .PHONY: check-dolphin
 check-dolphin:  ## Verify dolphin is importable from the bind-mounted source.
 	$(RUN) 'pip install --no-deps --quiet -e /dolphin && python -c "import dolphin; print(dolphin.__version__)"'
+
+# ---------------------------------------------------------------------------
+# Local CI (mirror of dolphin's .github/workflows/test-build-push.yml)
+# ---------------------------------------------------------------------------
+#
+# ci-lint runs dolphin's own pre-commit config (black/ruff/mypy at the
+# versions pinned upstream) — requires `pip install pre-commit` on the host
+# and a one-time `pre-commit install` inside the dolphin clone.
+#
+# ci-test mirrors the CI pytest step inside the dev container. The container
+# env is close to, but not identical to, upstream CI: micromamba resolves
+# conda-env.yml fresh there, and isce3/tophu/spurt are absent here (hence
+# test_baseline.py is skipped — it imports isce3). When a failure looks
+# environmental, re-run against a baseline ref (upstream/main) and compare:
+# the meaningful signal is the diff against baseline, not the raw pass/fail.
+
+PYTEST_ARGS ?=
+
+.PHONY: ci-local
+ci-local: ci-lint ci-test  ## Lint + CI-equivalent pytest. Run before pushing dolphin branches.
+
+.PHONY: ci-lint
+ci-lint:  ## Run dolphin's pre-commit hooks (black/ruff/mypy) on all files.
+	cd .. && pre-commit run --all-files
+
+.PHONY: ci-test
+ci-test:  ## CI-mirror pytest in the container (NUMBA_BOUNDSCHECK=1, -n0). Extra args via PYTEST_ARGS=...
+	$(RUN) 'pip install --no-deps -q -e /dolphin && \
+		pip install -q -U opera-utils && \
+		pip install -q -r /dolphin/tests/requirements.txt "pytest<8.4" "ortools!=9.13.*" && \
+		cd /dolphin && NUMBA_BOUNDSCHECK=1 TQDM_DISABLE=1 PY_IGNORE_IMPORTMISMATCH=1 \
+		python -m pytest -n0 -q --ignore=tests/test_baseline.py $(PYTEST_ARGS)'
