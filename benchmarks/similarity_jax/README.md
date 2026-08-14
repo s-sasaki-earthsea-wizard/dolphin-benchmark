@@ -1,0 +1,114 @@
+# similarity.py: numba → JAX equivalence and benchmarks
+
+Evidence package for replacing the numba implementation of
+`dolphin/similarity.py` with a JAX implementation, as part of upstream issue
+[isce-framework/dolphin#545](https://github.com/isce-framework/dolphin/issues/545)
+(remove numba as a dependency).
+
+## What is compared
+
+- **Reference**: `similarity_numba_c2f7c24.py` — byte-identical copy of
+  `src/dolphin/similarity.py` from upstream commit `c2f7c24`
+  (git blob `d146b8e7e7af3f87d91bd0141d939262d414bd45`), the
+  `numba.njit(parallel=True)` per-pixel loop.
+- **Under test**: the `feature/545-jax-similarity` branch of the dolphin
+  clone (editable install in the dev container), which replaces the loop with
+  a jitted JAX kernel:
+  - edge-replicating pad + `lax.dynamic_slice` per neighbor offset
+    (mathematically identical to the reference's per-axis index clipping),
+  - `lax.map` over offsets (bounds peak memory at one
+    `(n_ifg, rows, cols)` intermediate),
+  - median via `lax.top_k` partial selection (`_nanmedian_top_k`), computing
+    the same two middle order statistics as `np.nanmedian`.
+
+## Equivalence (`compare_similarity.py`)
+
+Tolerance `rtol=1e-5, atol=5e-6`, justified by the reference accumulating in
+float64 and casting to float32 on output, while JAX computes in float32
+throughout. Observed differences are ~1e-7 (float32 rounding).
+
+- CPU backend: **28/28 PASS** (`compare_cpu.json`)
+- GPU backend: **32/32 PASS** (`compare_gpu.json`), including two real-data
+  cases built from OPERA CSLC tutorial granules (track 78, T078-165573-IW2):
+  a fully-valid interior window and a window straddling the valid/invalid
+  burst boundary (119k valid / 143k NaN pixels). NaN patterns match exactly
+  in every case.
+
+Cases cover: multiple radii (2–11), median/max, random and pathological
+masks, all-NaN / all-zero invalid pixels, scattered single-ifg NaNs, float32
+and float64 phase (non-complex) inputs, images smaller than the search
+radius, and single-row images.
+
+## Benchmarks
+
+Environment: 16-core host, NVIDIA RTX 5080 (16 GB), CUDA 12.6 container,
+JAX 0.10.1, numba from the dolphin conda env. Steady-state medians of 5 reps;
+first-call (JIT compile) times recorded separately in the JSONs.
+
+### Single call (`bench_similarity.py`)
+
+`median_similarity`, latency of one call:
+
+| n_ifg × rows × cols, radius | numba | JAX CPU | JAX GPU |
+|---|---|---|---|
+| 20 × 512², r=7  | 2.09 s | 3.41 s | 0.41 s |
+| 20 × 512², r=11 | 3.03 s | 8.66 s | 0.44 s |
+| 30 × 1024², r=7 | 9.76 s | 16.1 s | 3.56 s |
+
+### Thread-pool throughput (`bench_threaded.py`)
+
+`create_similarities` always processes rasters as 512×512 blocks through
+`io.process_blocks` with `num_threads=5` (default), so per-call latency
+understates real throughput. 15 blocks of (20, 512, 512), r=7, 5 threads:
+
+| implementation | total | per block | vs numba |
+|---|---|---|---|
+| numba   | 17.2 s | 1.149 s | 1.0× |
+| JAX CPU | 13.0 s | 0.865 s | **1.33× faster** |
+| JAX GPU | 2.39 s | 0.159 s | **7.2× faster** |
+
+numba (`nogil=True, parallel=True`) already saturates all cores from a single
+call, so 5 concurrent block threads contend (only 1.8× scaling). The JAX
+call's sort/top_k stage is single-threaded per call, so concurrent block
+calls pack cleanly (3.9× scaling) and overtake numba.
+
+### Why single-call CPU is slower: XLA sort (`diag_cpu_breakdown.py`)
+
+The per-offset slice+multiply machinery is on par with numba
+(`max_similarity`: 1.4 s vs numba's 2.1 s total). The gap is entirely the
+median reduction — XLA's CPU sort is single-threaded and slow:
+
+| stage on (K, 512, 512) cube | K=136 | K=348 |
+|---|---|---|
+| `jnp.nanmax`               | 0.06 s | 0.15 s |
+| `jnp.sort` (axis 0)        | 4.39 s | 16.1 s |
+| `jnp.sort` (last axis)     | 3.97 s | 12.3 s |
+| `lax.top_k` (k = K/2 + 1)  | 2.07 s | 6.23 s |
+
+Hence the `lax.top_k`-based median in the implementation (bit-identical to
+`np.nanmedian` on this cube, verified in the same script).
+
+## Reproducing
+
+Inside the dev container (`make shell`, or `./docker/run.sh '<cmd>'`):
+
+```bash
+cd /dolphin-benchmark/benchmarks/similarity_jax
+JAX_PLATFORMS=cpu  python compare_similarity.py --out compare_cpu.json
+JAX_PLATFORMS=cuda python compare_similarity.py --out compare_gpu.json --real-data-dir /cslc
+JAX_PLATFORMS=cpu  python bench_similarity.py   --out bench_cpu.json
+JAX_PLATFORMS=cuda python bench_similarity.py   --out bench_gpu.json --skip-numba
+JAX_PLATFORMS=cpu  python bench_threaded.py     --out bench_threaded_cpu.json
+JAX_PLATFORMS=cuda python bench_threaded.py     --out bench_threaded_gpu.json --skip-numba
+```
+
+The container image predates some current dolphin deps; each invocation
+above assumes `pip install --no-deps -e /dolphin && pip install -U opera-utils`
+has run in the container first.
+
+## Disclosure
+
+Implementation, harness, and measurements were produced with assistance from
+Claude Code (model: Claude Fable 5). All results were generated by executing
+the scripts in this directory; numbers in this README come from the JSON
+files committed alongside it.

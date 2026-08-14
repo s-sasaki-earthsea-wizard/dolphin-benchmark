@@ -1,0 +1,16 @@
+{
+  "n_blocks": 15,
+  "num_threads": 5,
+  "n_ifg": 20,
+  "block": 512,
+  "radius": 7,
+  "summary": "median",
+  "jax_backend": "gpu",
+  "jax_version": "0.10.1",
+  "numba_version": "0.65.1",
+  "cpu_count": 16,
+  "seed": 99,
+  "elapsed_s": {
+    "jax_gpu": 2.388840795494616
+  }
+}
