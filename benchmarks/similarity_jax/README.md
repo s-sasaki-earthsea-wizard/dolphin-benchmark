@@ -83,20 +83,25 @@ granules (n_ifg=20) and include NaN borders (0–100% NaN per block);
 | sequential (2 threads, r=11) | real | 1.95 | 1.65 | 4.24 | 0.31 |
 | default (5 threads, r=7) | synthetic | 1.21 | 1.18 | 0.83 | – |
 | default (5 threads, r=7) | real | 1.10 | 1.04 | 0.66 | – |
+| sequential5 (5 threads, r=11)* | synthetic | 1.60 | – | 2.17 | – |
+| sequential5 (5 threads, r=11)* | real | 1.26 | – | 1.65 | – |
 
-Readings:
+\* exploratory: sequential.py's radius at the default thread count — not an
+existing call site; probes whether a thread bump alone would flip r=11.
+
+Readings (ratios computed from the raw JSON medians, not the rounded table):
 
 - **In the two configurations dolphin actually runs, the JAX version is
-  1.5× (single) to 2.2× (sequential) slower on CPU**, and 4.8–6.7× faster
-  on GPU. The sequential config is the worst CPU case because `top_k` cost
-  grows superlinearly with the neighbor count (r=11 → K=348).
-- The default 5-thread shape is the one place JAX CPU wins (1.5–1.7×), but
-  no in-repo caller uses it. The `NUMBA_NUM_THREADS` control shows part of
-  numba's pool penalty is its own thread contention (capping helps numba),
-  yet capped numba still loses to JAX there — the JAX win in that shape is
-  genuine, it just is not the shape dolphin runs today. Raising the callers'
-  `num_threads` would flip the CPU comparison in JAX's favor, but that is a
-  separate workflow change with its own memory/I/O implications.
+  1.5× (single) to 2.2–2.3× (sequential) slower on CPU**, and 5.1–6.7×
+  faster on GPU. The sequential config is the worst CPU case because
+  `top_k` cost grows superlinearly with the neighbor count (r=11 → K=348).
+- The default 5-thread shape is the one place JAX CPU wins: 1.5–1.7× vs
+  uncapped numba, and still 1.4–1.6× vs the `NUMBA_NUM_THREADS`-capped
+  control — so the win is genuine, not just numba's pool-thread
+  contention. But no in-repo caller uses that shape, and the win does
+  **not** extend to r=11: at 5 threads the JAX version is still 1.3–1.4×
+  slower there (sequential5 rows) — a caller-side thread bump flips the
+  r=7 path only.
 - Real NaN-bearing blocks shift both implementations only mildly (the numba
   loop skips masked/NaN centers; the JAX kernel computes densely).
 

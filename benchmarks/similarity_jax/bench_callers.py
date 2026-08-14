@@ -44,11 +44,15 @@ SEED = 20260814
 N_IFG = 20
 BLOCK = 512
 
-# label -> (num_threads, search_radius, n_blocks), mirroring the call sites
+# label -> (num_threads, search_radius, n_blocks), mirroring the call sites.
+# "sequential5" is exploratory: sequential.py's radius with the default
+# thread count, probing whether a caller-side num_threads bump would also
+# flip the r=11 comparison (not an existing call site).
 CONFIGS = {
     "single": (1, 7, 5),
     "sequential": (2, 11, 6),
     "default": (5, 7, 10),
+    "sequential5": (5, 11, 10),
 }
 MAX_BLOCKS = max(n for _, _, n in CONFIGS.values())
 
