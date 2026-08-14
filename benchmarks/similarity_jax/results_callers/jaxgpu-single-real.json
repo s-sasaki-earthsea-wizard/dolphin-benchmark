@@ -1,0 +1,22 @@
+{
+  "impl": "jax",
+  "jax_backend": "gpu",
+  "config": "single",
+  "dataset": "real",
+  "num_threads": 1,
+  "radius": 7,
+  "n_blocks": 5,
+  "numba_threads_cap": null,
+  "reps": 3,
+  "pass_times_s": [
+    1.8628936912864447,
+    1.8515039691701531,
+    1.849944718182087
+  ],
+  "s_per_block": [
+    0.37257873825728893,
+    0.37030079383403064,
+    0.3699889436364174
+  ],
+  "median_s_per_block": 0.37030079383403064
+}

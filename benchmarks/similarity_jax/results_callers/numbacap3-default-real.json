@@ -1,0 +1,22 @@
+{
+  "impl": "numba",
+  "jax_backend": null,
+  "config": "default",
+  "dataset": "real",
+  "num_threads": 5,
+  "radius": 7,
+  "n_blocks": 10,
+  "numba_threads_cap": 3,
+  "reps": 3,
+  "pass_times_s": [
+    10.416806127876043,
+    9.944208783097565,
+    10.496860696002841
+  ],
+  "s_per_block": [
+    1.0416806127876044,
+    0.9944208783097566,
+    1.049686069600284
+  ],
+  "median_s_per_block": 1.0416806127876044
+}

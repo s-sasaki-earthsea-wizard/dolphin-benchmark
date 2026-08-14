@@ -96,6 +96,13 @@ def build_cases(rng):
     lone_mask[8, 8] = True
     cases.append(("lone_pixel_r3", random_unit_stack(rng, 6, 16, 16), lone_mask, 3))
 
+    # 10. Non-bool masks: the numba loop used truthiness (nonzero == valid).
+    # int value 2 has no low bit set, catching bitwise-AND mask handling
+    small = random_unit_stack(rng, 4, 20, 21)
+    nonbool = (rng.random((20, 21)) > 0.3).astype("int16") * 2
+    cases.append(("int2_mask_r3", small, nonbool, 3))
+    cases.append(("float_mask_r3", small, nonbool.astype("float32") / 2, 3))
+
     return cases
 
 

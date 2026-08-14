@@ -6,7 +6,7 @@
   "rtol": 1e-05,
   "atol": 5e-06,
   "seed": 1234,
-  "n_cases": 32,
+  "n_cases": 36,
   "all_pass": true,
   "results": [
     {
@@ -510,6 +510,78 @@
       "n_nan_jax": 256,
       "nan_pattern_match": true,
       "max_abs_diff": 0.0,
+      "allclose": true,
+      "pass": true
+    },
+    {
+      "case": "int2_mask_r3",
+      "summary": "median",
+      "shape": [
+        4,
+        20,
+        21
+      ],
+      "radius": 3,
+      "dtype": "complex64",
+      "n_valid": 275,
+      "n_nan_ref": 145,
+      "n_nan_jax": 145,
+      "nan_pattern_match": true,
+      "max_abs_diff": 2.9802322387695312e-08,
+      "allclose": true,
+      "pass": true
+    },
+    {
+      "case": "int2_mask_r3",
+      "summary": "max",
+      "shape": [
+        4,
+        20,
+        21
+      ],
+      "radius": 3,
+      "dtype": "complex64",
+      "n_valid": 275,
+      "n_nan_ref": 145,
+      "n_nan_jax": 145,
+      "nan_pattern_match": true,
+      "max_abs_diff": 5.960464477539063e-08,
+      "allclose": true,
+      "pass": true
+    },
+    {
+      "case": "float_mask_r3",
+      "summary": "median",
+      "shape": [
+        4,
+        20,
+        21
+      ],
+      "radius": 3,
+      "dtype": "complex64",
+      "n_valid": 275,
+      "n_nan_ref": 145,
+      "n_nan_jax": 145,
+      "nan_pattern_match": true,
+      "max_abs_diff": 2.9802322387695312e-08,
+      "allclose": true,
+      "pass": true
+    },
+    {
+      "case": "float_mask_r3",
+      "summary": "max",
+      "shape": [
+        4,
+        20,
+        21
+      ],
+      "radius": 3,
+      "dtype": "complex64",
+      "n_valid": 275,
+      "n_nan_ref": 145,
+      "n_nan_jax": 145,
+      "nan_pattern_match": true,
+      "max_abs_diff": 5.960464477539063e-08,
       "allclose": true,
       "pass": true
     },

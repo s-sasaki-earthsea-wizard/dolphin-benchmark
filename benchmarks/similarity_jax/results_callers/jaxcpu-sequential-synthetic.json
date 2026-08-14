@@ -1,0 +1,22 @@
+{
+  "impl": "jax",
+  "jax_backend": "cpu",
+  "config": "sequential",
+  "dataset": "synthetic",
+  "num_threads": 2,
+  "radius": 11,
+  "n_blocks": 6,
+  "numba_threads_cap": null,
+  "reps": 3,
+  "pass_times_s": [
+    26.21717588417232,
+    25.832587991841137,
+    26.309347135014832
+  ],
+  "s_per_block": [
+    4.36952931402872,
+    4.305431331973523,
+    4.384891189169139
+  ],
+  "median_s_per_block": 4.36952931402872
+}
