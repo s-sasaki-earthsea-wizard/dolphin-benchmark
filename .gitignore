@@ -16,7 +16,13 @@ __pycache__/
 
 # run scratch: the container's /work mount (../results). Holds logs, intermediate
 # rasters, run-subset/ outputs, *.nsys-rep, gpu probes — all regenerable.
-/results/
+# `/results/*` (not `/results/`) so the asv-baseline exception below can work:
+# git cannot re-include files whose parent directory is itself excluded.
+/results/*
+# ...except the curated ASV baseline (result JSONs + README are deliverables,
+# and future re-runs should show up as reviewable diffs).
+!/results/asv-baseline/
+!/results/asv-baseline/**
 
 # ...but curated report artifacts under reports/ ARE tracked, including the flame
 # graph SVG that the global "*.svg" rule above would otherwise drop.

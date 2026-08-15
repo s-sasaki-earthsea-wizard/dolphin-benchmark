@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "project": "dolphin",
+  "project_url": "https://dolphin-insar.readthedocs.io/",
+  "repo": "/dolphin",
+  "branches": [
+    "main"
+  ],
+  "build_command": [
+    "python -m pip install setuptools_scm",
+    "python -m pip install build",
+    "python -m build",
+    "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
+  ],
+  "environment_type": "mamba",
+  "install_timeout": 600,
+  "show_commit_url": "https://github.com/isce-framework/dolphin/commit/",
+  "pythons": [
+    "3.11"
+  ],
+  "conda_channels": [
+    "conda-forge",
+    "defaults"
+  ],
+  "conda_environment_file": "/dolphin/conda-env.yml",
+  "benchmark_dir": "/dolphin/benchmarks",
+  "env_dir": "/asv-env/ci",
+  "results_dir": "/work/asv-ci",
+  "html_dir": "/asv-env/html/ci"
+}
