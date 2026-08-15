@@ -1,0 +1,152 @@
+{
+    "benchmarks.CovarianceBenchmark.peakmem_covariance_stack": {
+        "code": "class CovarianceBenchmark:\n    def peakmem_covariance_stack(self, nslc):\n        covariance.estimate_stack_covariance(\n            self.slc_stack, half_window=HALF_WINDOW, strides=STRIDES\n        )\n\n    def setup(self, nslc):\n        self.slc_samples = np.load(\"slc_samples.npy\")[:nslc, :]\n        self.slc_stack = self.slc_samples.reshape((nslc, *SHAPE))\n\n    def setup_cache(self):\n        # Run the several-second generation of samples once in setup_cache\n        # https://asv.readthedocs.io/en/v0.6.1/writing_benchmarks.html\n        np.save(\"slc_samples.npy\", _make_slc_samples())",
+        "name": "benchmarks.CovarianceBenchmark.peakmem_covariance_stack",
+        "param_names": [
+            "nslc"
+        ],
+        "params": [
+            [
+                "10",
+                "20",
+                "30"
+            ]
+        ],
+        "setup_cache_key": "benchmarks:66",
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "e5b6a095d94663de40b35762e8022c87f73790a445875ddd1498ed1155974c77"
+    },
+    "benchmarks.CovarianceBenchmark.time_covariance_single": {
+        "code": "class CovarianceBenchmark:\n    def time_covariance_single(self, nslc):\n        # Test one covariance matrix on part of the samples\n        covariance.coh_mat_single(self.slc_samples[:, :200])\n\n    def setup(self, nslc):\n        self.slc_samples = np.load(\"slc_samples.npy\")[:nslc, :]\n        self.slc_stack = self.slc_samples.reshape((nslc, *SHAPE))\n\n    def setup_cache(self):\n        # Run the several-second generation of samples once in setup_cache\n        # https://asv.readthedocs.io/en/v0.6.1/writing_benchmarks.html\n        np.save(\"slc_samples.npy\", _make_slc_samples())",
+        "min_run_count": 2,
+        "name": "benchmarks.CovarianceBenchmark.time_covariance_single",
+        "number": 0,
+        "param_names": [
+            "nslc"
+        ],
+        "params": [
+            [
+                "10",
+                "20",
+                "30"
+            ]
+        ],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "setup_cache_key": "benchmarks:66",
+        "type": "time",
+        "unit": "seconds",
+        "version": "90d931fe1a2b8300d4b3a6aedcea1658c02ca2affc804b5182b361db36b1b2d8",
+        "warmup_time": -1
+    },
+    "benchmarks.CovarianceBenchmark.time_covariance_stack": {
+        "code": "class CovarianceBenchmark:\n    def time_covariance_stack(self, nslc):\n        covariance.estimate_stack_covariance(\n            self.slc_stack, half_window=HALF_WINDOW, strides=STRIDES\n        )\n\n    def setup(self, nslc):\n        self.slc_samples = np.load(\"slc_samples.npy\")[:nslc, :]\n        self.slc_stack = self.slc_samples.reshape((nslc, *SHAPE))\n\n    def setup_cache(self):\n        # Run the several-second generation of samples once in setup_cache\n        # https://asv.readthedocs.io/en/v0.6.1/writing_benchmarks.html\n        np.save(\"slc_samples.npy\", _make_slc_samples())",
+        "min_run_count": 2,
+        "name": "benchmarks.CovarianceBenchmark.time_covariance_stack",
+        "number": 0,
+        "param_names": [
+            "nslc"
+        ],
+        "params": [
+            [
+                "10",
+                "20",
+                "30"
+            ]
+        ],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "setup_cache_key": "benchmarks:66",
+        "type": "time",
+        "unit": "seconds",
+        "version": "50c3a034070f49be8bf06f4ac5468c5811c4f185fe995845fb6d28636499f34c",
+        "warmup_time": -1
+    },
+    "benchmarks.PhaseLinkingBenchmark.peakmem_phase_link": {
+        "code": "class PhaseLinkingBenchmark:\n    def peakmem_phase_link(self, nslc: int, use_evd: bool):\n        _core.run_phase_linking(\n            self.slc_stack,\n            half_window=HALF_WINDOW,\n            strides=STRIDES,\n            use_evd=use_evd,\n        )\n\n    def setup(self, nslc: int, use_evd: bool):\n        self.slc_samples = np.load(\"slc_samples.npy\")[:nslc, :]\n        self.slc_stack = self.slc_samples.reshape((nslc, *SHAPE))\n\n    def setup_cache(self):\n        np.save(\"slc_samples.npy\", _make_slc_samples())",
+        "name": "benchmarks.PhaseLinkingBenchmark.peakmem_phase_link",
+        "param_names": [
+            "nslc",
+            "use_evd"
+        ],
+        "params": [
+            [
+                "10",
+                "20",
+                "30"
+            ],
+            [
+                "True",
+                "False"
+            ]
+        ],
+        "setup_cache_key": "benchmarks:97",
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "b6be90a347cdc23d549d7da979bd5cfd29f76b5dc3034ca3fe558d021e0e4367"
+    },
+    "benchmarks.PhaseLinkingBenchmark.time_phase_link": {
+        "code": "class PhaseLinkingBenchmark:\n    def time_phase_link(self, nslc: int, use_evd: bool):\n        _core.run_phase_linking(\n            self.slc_stack,\n            half_window=HALF_WINDOW,\n            strides=STRIDES,\n            use_evd=use_evd,\n        )\n\n    def setup(self, nslc: int, use_evd: bool):\n        self.slc_samples = np.load(\"slc_samples.npy\")[:nslc, :]\n        self.slc_stack = self.slc_samples.reshape((nslc, *SHAPE))\n\n    def setup_cache(self):\n        np.save(\"slc_samples.npy\", _make_slc_samples())",
+        "min_run_count": 2,
+        "name": "benchmarks.PhaseLinkingBenchmark.time_phase_link",
+        "number": 0,
+        "param_names": [
+            "nslc",
+            "use_evd"
+        ],
+        "params": [
+            [
+                "10",
+                "20",
+                "30"
+            ],
+            [
+                "True",
+                "False"
+            ]
+        ],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "setup_cache_key": "benchmarks:97",
+        "type": "time",
+        "unit": "seconds",
+        "version": "0fa9c97cdc80befa9682c06364affaec0df9e5f6be0b3cd955df28caf8b55ea9",
+        "warmup_time": -1
+    },
+    "benchmarks.ShpBenchmark.time_estimate_neighbors": {
+        "code": "class ShpBenchmark:\n    def time_estimate_neighbors(self):\n        shp.estimate_neighbors(\n            halfwin_rowcol=(HALF_WINDOW[\"y\"], HALF_WINDOW[\"x\"]),\n            alpha=0.001,\n            strides=STRIDES,\n            mean=self.amp_mean,\n            var=self.amp_variance,\n            nslc=30,\n            method=shp.ShpMethod.GLRT,\n        )\n\n    def setup(self):\n        self.nslc = 30\n        slc_samples = _make_slc_samples()\n        slc_stack = slc_samples.reshape((self.nslc, *SHAPE))\n    \n        self.amp_mean = np.mean(np.abs(slc_stack), axis=0)\n        self.amp_variance = np.var(np.abs(slc_stack), axis=0)",
+        "min_run_count": 2,
+        "name": "benchmarks.ShpBenchmark.time_estimate_neighbors",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "ec69f3b1defe2738bfdd2e802a39d3032e494527fc08256fd09098da80087465",
+        "warmup_time": -1
+    },
+    "benchmarks.SingleMinistackBenchmark.time_single_ministack": {
+        "code": "class SingleMinistackBenchmark:\n    def time_single_ministack(self):\n        ministack_planner = MiniStackPlanner(\n            file_list=self.slc_file_list,\n            dates=self.dates,\n            is_compressed=[False] * len(self.slc_file_list),\n            output_folder=Path(\"pl\"),\n        )\n        # We're using \"sequential\", but just making it one ministack\n        ministack_size = len(self.slc_file_list)\n        sequential.run_wrapped_phase_sequential(\n            slc_vrt_file=self.v_file,\n            ministack_planner=ministack_planner,\n            ministack_size=ministack_size,\n            half_window=HALF_WINDOW,\n            strides=STRIDES,\n            block_shape=(512, 512),\n            # use_evd=cfg.phase_linking.use_evd,\n            # n_workers=cfg.worker_settings.n_workers,\n        )\n\n    def setup(self):\n        # TODO: If we change the dates/size, we'll need a way to remove the last run\n        output_folder = Path(\"pl\")\n        if output_folder.exists():\n            shutil.rmtree(output_folder, ignore_errors=True)\n    \n        output_folder.mkdir()\n        v_file = output_folder / \"stack.vrt\"\n    \n        subprocess.run(\"vmtouch -e .\", shell=True)  # noqa: PLW1510\n        self.slc_file_list = sorted(Path(\"slcs\").glob(\"20*.slc.tif\"))\n        assert (\n            len(self.slc_file_list) > 0\n        ), f\"No SLC files found: {list(Path('slcs').glob('*'))}\"\n        self.dates = [get_dates(f) for f in self.slc_file_list]\n    \n        io.VRTStack(self.slc_file_list, outfile=Path(\"pl\") / \"stack.vrt\")\n        self.v_file = v_file\n\n    def setup_cache(self):\n        _make_slc_stack(Path(\"slcs\"))",
+        "min_run_count": 2,
+        "name": "benchmarks.SingleMinistackBenchmark.time_single_ministack",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "setup_cache_key": "benchmarks:177",
+        "type": "time",
+        "unit": "seconds",
+        "version": "cdf022f30f6e11c6cac5392106d8752a58e17f0094bee90a375807b60bc2638e",
+        "warmup_time": -1
+    },
+    "version": 2
+}
