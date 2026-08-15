@@ -110,6 +110,25 @@ RUN echo 'eval "$(micromamba shell hook --shell bash)" 2>/dev/null || true' >> /
 ENV XLA_PYTHON_CLIENT_PREALLOCATE=false
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION=0.75
 
+# --- Appended layers: kept at the END so the heavy conda/pip layers above
+# --- stay cached when these change.
+#
+# vmtouch: SingleMinistackBenchmark.setup in dolphin's asv suite calls
+# `vmtouch -e .` to evict page cache; without the binary the call silently
+# no-ops (shell=True, no check) and the benchmark measures warm-cache reads.
+#
+# /asv-env: mount point for the asv named volume (see docker-compose.yml).
+# Pre-creating it with the runtime user's ownership makes Docker's
+# copy-on-first-use populate the volume owner-correct; otherwise the volume
+# root is root-owned and the non-root user cannot write environments there.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        vmtouch \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /asv-env \
+    && chown ${USER_ID}:${GROUP_ID} /asv-env
+USER ${USERNAME}
+
 # Bind-mount targets (/dolphin, /dolphin-benchmark, /data) are created
 # automatically by Docker at mount time. /work is created by WORKDIR below.
 WORKDIR /work

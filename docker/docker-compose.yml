@@ -10,6 +10,11 @@
 services:
   dev:
     image: dolphin-benchmark:gpu
+    # Stable hostname: asv derives its default machine name from the hostname,
+    # and result files are keyed by machine name. Without this, every
+    # `docker compose run` gets a random hostname and results scatter across
+    # phantom machines.
+    hostname: dolphin-bench
     build:
       context: .
       dockerfile: Dockerfile
@@ -51,6 +56,11 @@ services:
       - "${OPERA_CSLC_DIR:?OPERA_CSLC_DIR not set — copy .env.example to .env and fill it in}:/cslc:rw"
       # Per-run scratch (defaults to ../results on host).
       - "../results:/work:rw"
+      # asv environments, per-commit checkouts and build caches. A named
+      # volume on container-local disk: both repos are NAS-mounted, and asv's
+      # env creation / wheel builds are far too write-heavy for the NAS.
+      # Only result JSONs (written to /work) land on the NAS.
+      - "asv-env:/asv-env"
     working_dir: /work
     # tty + stdin for interactive shell; -i compose flag also needed (see README).
     tty: true
@@ -71,3 +81,7 @@ services:
         python -c 'import jax; print(\"JAX backend:\", jax.default_backend(), \"devices:\", jax.devices())' &&
         exec bash -l
       "
+
+volumes:
+  # asv env/build cache — see the /asv-env mount in the dev service.
+  asv-env:
