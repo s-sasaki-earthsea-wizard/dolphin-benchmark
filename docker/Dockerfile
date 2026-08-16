@@ -89,8 +89,16 @@ RUN micromamba run -n dolphin-env pip install --no-cache-dir --upgrade \
         snaphu
 
 # Benchmarking + profiling tools.
+#
+# asv_runner is pulled in by asv, but its dependency range is loose and 0.3.0
+# carries a regression that runs a class's bound `setup(self)` before
+# `setup_cache()` (airspeed-velocity/asv_runner#52, fixed by PR #54 in 0.3.1).
+# That breaks any benchmark whose setup consumes setup_cache output —
+# dolphin's SingleMinistackBenchmark among them — so the lower bound is
+# pinned explicitly rather than left to the resolver.
 RUN micromamba run -n dolphin-env pip install --no-cache-dir \
         asv \
+        "asv_runner>=0.3.1" \
         py-spy \
         pynvml \
         ipython
