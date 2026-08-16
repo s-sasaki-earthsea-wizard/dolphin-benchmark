@@ -1,0 +1,70 @@
+ Container docker-dev-run-237f7d14bf7b Creating 
+ Container docker-dev-run-237f7d14bf7b Created 
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.6.3
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+· No information stored about machine 'dolphin-bench'. I know about nothing.
+  
+
+I will now ask you some questions about this machine to identify it in the benchmarks.
+
+1. machine:  A unique name to identify this machine in the results.
+   May be anything, as long as it is unique across all the machines
+   used to benchmark this project.  NOTE: If changed from the default,
+   it will no longer match the hostname of this machine, and you may
+   need to explicitly use the --machine argument to asv.
+machine [dolphin-bench]: 2. os:  The OS type and version of this machine.  For example,
+   'Macintosh OS-X 10.8'.
+os [Linux 6.17.0-29-generic]: 3. arch:  The generic CPU architecture of this machine.  For example,
+   'i386' or 'x86_64'.
+arch [x86_64]: 4. cpu:  A specific description of the CPU of this machine, including
+   its speed and class.  For example, 'Intel(R) Core(TM) i5-2520M CPU
+   @ 2.50GHz (4 cores)'.
+cpu [Intel(R) Core(TM) Ultra 9 285H]: 5. num_cpu:  The number of CPUs in the system. For example, '4'.
+num_cpu [16]: 6. ram:  The amount of physical RAM on this machine.  For example,
+   '4GB'.
+ram [100735156224]: runner in use: /tmp/runner030/asv_runner/__init__.py
+· Discovering benchmarks
+· Running 1 total benchmarks (1 commits * 1 environments * 1 benchmarks)
+[ 0.00%] · For dolphin commit 49975fce <feature/545-jax-similarity>:
+[ 0.00%] ·· Building for existing-py_opt_conda_envs_dolphin-env_bin_python3.14
+[ 0.00%] ·· Benchmarking existing-py_opt_conda_envs_dolphin-env_bin_python3.14
+[50.00%] ··· Setting up benchmarks:177                                   failed
+[50.00%] ···· /opt/conda/envs/dolphin-env/lib/python3.14/site-packages/h5py/__init__.py:36: UserWarning: h5py is running against HDF5 2.2.0 when it was built against 2.1.0, this may cause problems
+                _warn(("h5py is running against HDF5 {0} when it was built against {1}, "
+                         Files: 0
+                   Directories: 2
+                 Evicted Pages: 0 (0)
+                       Elapsed: 4.6e-05 seconds
+              Traceback (most recent call last):
+                File "/opt/conda/envs/dolphin-env/lib/python3.14/site-packages/asv/benchmark.py", line 99, in <module>
+                  main()
+                  ~~~~^^
+                File "/opt/conda/envs/dolphin-env/lib/python3.14/site-packages/asv/benchmark.py", line 91, in main
+                  commands[mode](args)
+                  ~~~~~~~~~~~~~~^^^^^^
+                File "/tmp/runner030/asv_runner/setup_cache.py", line 41, in _setup_cache
+                  cache = benchmark.do_setup_cache()
+                File "/tmp/runner030/asv_runner/benchmarks/_base.py", line 747, in do_setup_cache
+                  setup()
+                  ~~~~~^^
+                File "/dolphin/benchmarks/benchmarks.py", line 192, in setup
+                  len(self.slc_file_list) > 0
+              AssertionError: No SLC files found: []
+              
+              asv: setup_cache failed (exit status 1)
+
+[50.00%] ··· benchmarks.SingleMinistackBenchmark.time_single_ministack skipped (setup_cache failed)
+
