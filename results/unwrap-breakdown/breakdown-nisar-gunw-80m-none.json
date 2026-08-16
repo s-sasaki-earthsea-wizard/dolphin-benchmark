@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "label": "nisar-gunw-80m",
+    "preproc": "none",
+    "num_ifgs": 2,
+    "similarity_used": false,
+    "raster_shape_yx": [
+      4338,
+      4401
+    ],
+    "nlooks": 16.0,
+    "num_threads": 1,
+    "snaphu_ntiles": [
+      1,
+      1
+    ],
+    "snaphu_n_parallel_tiles": 1,
+    "inputs_on_local_disk": true,
+    "dolphin_commit": "49975fc",
+    "numpy": "2.4.6",
+    "numba": "0.66.0",
+    "snaphu_py": "0.4.1",
+    "hostname": "dolphin-bench",
+    "wall_seconds": 5862.72252759058
+  },
+  "summary": {
+    "seconds": {
+      "driver_io": 1.3645681720227003,
+      "snaphu": 5858.774196038954,
+      "set_nodata": 2.5345241650938988,
+      "total": 5862.719246560708,
+      "other": 0.04595818463712931
+    },
+    "calls": {
+      "driver_io": 2,
+      "snaphu": 2,
+      "set_nodata": 4,
+      "total": 2
+    }
+  },
+  "records": [
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.49874654598534107
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "snaphu",
+      "within": "total",
+      "seconds": 2635.4320791652426
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 1.086678422987461
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.13219201564788818
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "total",
+      "within": null,
+      "seconds": 2637.167279568501
+    },
+    {
+      "ifg": "20251106_20251130.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.8658216260373592
+    },
+    {
+      "ifg": "20251106_20251130.int.tif",
+      "stage": "snaphu",
+      "within": "total",
+      "seconds": 3223.3421168737113
+    },
+    {
+      "ifg": "20251106_20251130.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 1.0605447720736265
+    },
+    {
+      "ifg": "20251106_20251130.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.255108954384923
+    },
+    {
+      "ifg": "20251106_20251130.int.tif",
+      "stage": "total",
+      "within": null,
+      "seconds": 3225.551966992207
+    }
+  ]
+}

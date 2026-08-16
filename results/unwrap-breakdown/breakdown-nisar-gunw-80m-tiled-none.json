@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "label": "nisar-gunw-80m-tiled",
+    "preproc": "none",
+    "num_ifgs": 1,
+    "similarity_used": false,
+    "raster_shape_yx": [
+      4338,
+      4401
+    ],
+    "nlooks": 16.0,
+    "num_threads": 1,
+    "snaphu_ntiles": [
+      3,
+      3
+    ],
+    "snaphu_n_parallel_tiles": 4,
+    "inputs_on_local_disk": true,
+    "dolphin_commit": "49975fc",
+    "numpy": "2.4.6",
+    "numba": "0.66.0",
+    "snaphu_py": "0.4.1",
+    "hostname": "dolphin-bench",
+    "wall_seconds": 355.9982479158789
+  },
+  "summary": {
+    "seconds": {
+      "driver_io": 0.7855718228965998,
+      "snaphu": 354.07145553361624,
+      "set_nodata": 1.1029173703864217,
+      "total": 355.99585794564337,
+      "other": 0.03591321874409914
+    },
+    "calls": {
+      "driver_io": 1,
+      "snaphu": 1,
+      "set_nodata": 2,
+      "total": 1
+    }
+  },
+  "records": [
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.7855718228965998
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "snaphu",
+      "within": "total",
+      "seconds": 354.07145553361624
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.8810497336089611
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.22186763677746058
+    },
+    {
+      "ifg": "20251025_20251106.int.tif",
+      "stage": "total",
+      "within": null,
+      "seconds": 355.99585794564337
+    }
+  ]
+}

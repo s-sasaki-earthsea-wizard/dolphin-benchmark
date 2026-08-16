@@ -23,6 +23,10 @@ __pycache__/
 # and future re-runs should show up as reviewable diffs).
 !/results/asv-baseline/
 !/results/asv-baseline/**
+# ...and the unwrap-step breakdown results (summary + per-call records;
+# the extracted NISAR rasters next to them stay ignored via the *.tif rule).
+!/results/unwrap-breakdown/
+!/results/unwrap-breakdown/**
 
 # ...but curated report artifacts under reports/ ARE tracked, including the flame
 # graph SVG that the global "*.svg" rule above would otherwise drop.

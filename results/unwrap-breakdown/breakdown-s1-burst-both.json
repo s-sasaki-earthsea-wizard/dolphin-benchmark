@@ -1,0 +1,334 @@
+{
+  "meta": {
+    "label": "s1-burst",
+    "preproc": "both",
+    "num_ifgs": 3,
+    "similarity_used": true,
+    "raster_shape_yx": [
+      1630,
+      3441
+    ],
+    "nlooks": 435.0,
+    "num_threads": 1,
+    "inputs_on_local_disk": true,
+    "dolphin_commit": "49975fc",
+    "numpy": "2.4.6",
+    "numba": "0.66.0",
+    "snaphu_py": "0.4.1",
+    "hostname": "dolphin-bench",
+    "wall_seconds": 1041.1376530546695
+  },
+  "summary": {
+    "seconds": {
+      "driver_io": 4.098844671621919,
+      "goldstein": 4.549038857221603,
+      "interpolate": 0.9218639470636845,
+      "snaphu": 1023.9636633703485,
+      "transfer_ambiguities": 0.3428099397569895,
+      "conncomp_regrow": 4.843674077652395,
+      "set_nodata": 1.9460528129711747,
+      "total": 1041.1335890442133,
+      "other": 0.46764136757701635
+    },
+    "calls": {
+      "driver_io": 24,
+      "goldstein": 3,
+      "interpolate": 3,
+      "snaphu": 3,
+      "transfer_ambiguities": 3,
+      "conncomp_regrow": 3,
+      "set_nodata": 6,
+      "total": 3
+    }
+  },
+  "records": [
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.11097713001072407
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "goldstein",
+      "within": "total",
+      "seconds": 1.5299106305465102
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.2865547360852361
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.0773044666275382
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.04151733219623566
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.04255414195358753
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "interpolate",
+      "within": "total",
+      "seconds": 0.8191170636564493
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.38747549429535866
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "snaphu",
+      "within": "total",
+      "seconds": 353.7555629881099
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.03988244757056236
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "transfer_ambiguities",
+      "within": "total",
+      "seconds": 0.07936510536819696
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.17012458480894566
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "conncomp_regrow",
+      "within": "total",
+      "seconds": 1.8963025379925966
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.3095572395250201
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.19115522131323814
+    },
+    {
+      "ifg": "20210606_20210618.int.tif",
+      "stage": "total",
+      "within": null,
+      "seconds": 359.85485217906535
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.1388973630964756
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "goldstein",
+      "within": "total",
+      "seconds": 1.6217693211510777
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.17751561664044857
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.06060508545488119
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.07180390041321516
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.07381670735776424
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "interpolate",
+      "within": "total",
+      "seconds": 0.050666309893131256
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.38935908395797014
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "snaphu",
+      "within": "total",
+      "seconds": 336.35025003459305
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.08003056887537241
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "transfer_ambiguities",
+      "within": "total",
+      "seconds": 0.12368417624384165
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.34695068653672934
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "conncomp_regrow",
+      "within": "total",
+      "seconds": 1.4766923785209656
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.5246990537270904
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.19139629881829023
+    },
+    {
+      "ifg": "20210606_20210630.int.tif",
+      "stage": "total",
+      "within": null,
+      "seconds": 341.8518101191148
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.14006170257925987
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "goldstein",
+      "within": "total",
+      "seconds": 1.3973589055240154
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.38129674550145864
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.11938490439206362
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.07177441660314798
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.07115903962403536
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "interpolate",
+      "within": "total",
+      "seconds": 0.05208057351410389
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.3936011306941509
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "snaphu",
+      "within": "total",
+      "seconds": 333.8578503476456
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.load_gdal",
+      "within": "total",
+      "seconds": 0.08186778612434864
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "transfer_ambiguities",
+      "within": "total",
+      "seconds": 0.13976065814495087
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "io.write_arr",
+      "within": "total",
+      "seconds": 0.34432960022240877
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "conncomp_regrow",
+      "within": "total",
+      "seconds": 1.4706791611388326
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.5318860746920109
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "set_nodata",
+      "within": "total",
+      "seconds": 0.19735892489552498
+    },
+    {
+      "ifg": "20210606_20210712.int.tif",
+      "stage": "total",
+      "within": null,
+      "seconds": 339.42692674603313
+    }
+  ]
+}
