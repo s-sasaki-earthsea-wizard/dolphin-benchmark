@@ -85,10 +85,16 @@ asv-smoke: asv-confs  ## R1 smoke: asv run --quick, GPU, existing env.
 			--set-commit-hash $$(git -C /dolphin rev-parse HEAD) \
 			--config $(ASV_GPU_CONF)'
 
-# Baseline runs restrict to the benchmarks that work: ShpBenchmark crashes on
-# HALF_WINDOW["y"] (upstream bug) and SingleMinistackBenchmark dies in
-# setup_cache under asv_runner 0.3.0's setup-ordering change — both recorded
-# by the R1 smoke, no point re-measuring failures here.
+# Baseline runs restrict to the benchmarks that work. Both exclusions are
+# upstream dolphin bugs of the same kind — the suite calls an API that changed
+# underneath it: ShpBenchmark on HALF_WINDOW["y"] (#203) and
+# SingleMinistackBenchmark on run_wrapped_phase_sequential's signature (#334).
+# Both recorded as `failed` by the R1 smoke, no point re-measuring here; both
+# are fixed on the fork's fix/asv-benchmark-suite branch.
+#
+# Until then this is a plain override, e.g. to measure one of them:
+#   make asv-baseline-gpu ASV_WORKING_BENCHES=SingleMinistackBenchmark
+#
 # NUMBA_NUM_THREADS stays unset: none of the working benchmarks touch numba,
 # and leaving it unset matches upstream CI.
 ASV_WORKING_BENCHES := "CovarianceBenchmark|PhaseLinkingBenchmark"

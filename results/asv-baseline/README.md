@@ -52,7 +52,7 @@ Configs are generated from upstream `asv.conf.json` by `asv/generate-confs.sh`
 | Python | 3.14 (upstream CI's mamba config pins 3.11 — see caveats) |
 | dolphin | `49975fce` (`feature/545-jax-similarity`; identical to upstream `main` c2f7c24 except `similarity.py`, which no benchmark touches) |
 | jax | 0.11.0 |
-| asv / asv_runner | 0.6.6 / 0.3.0 |
+| asv / asv_runner | 0.6.6 / 0.3.0 — the R2/R3 numbers were taken on 0.3.0; the image moved to 0.3.1 on 2026-08-16, see "Broken benchmarks" |
 | opera-utils | pip `git+…@main`, resolved `97f77d93d04e20cced1938c6282c30b547951600` |
 
 ## Environment controls
@@ -71,15 +71,49 @@ Configs are generated from upstream `asv.conf.json` by `asv/generate-confs.sh`
 
 ## Broken benchmarks (excluded from R2/R3, recorded by the R1 smoke)
 
+Both are **upstream dolphin bugs of the same kind**: the benchmark suite calls
+an API that changed underneath it, and `benchmark.yml` only runs on the
+`benchmark` label, so nothing exercised them.
+
 1. `ShpBenchmark.time_estimate_neighbors` — `TypeError: tuple indices must be
    integers or slices, not str` at `benchmarks.py:134` (`HALF_WINDOW["y"]`;
-   `HalfWindow` became a NamedTuple in upstream #203). Upstream bug,
-   asv-level `failed` marker confirmed in R1.
-2. `SingleMinistackBenchmark.time_single_ministack` — setup_cache phase dies:
-   asv_runner 0.3.0's `do_setup_cache` (asv#1592 follow-up) now runs
-   parameter-free `setup()` hooks *before* `setup_cache()`, and this
-   benchmark's `setup` asserts on files that `setup_cache` creates. Breaks on
-   any current asv_runner install, including upstream CI's.
+   `HalfWindow` became a NamedTuple in upstream #203, 2024-01-31). Upstream
+   bug, asv-level `failed` marker confirmed in R1.
+2. `SingleMinistackBenchmark.time_single_ministack` — `TypeError:
+   run_wrapped_phase_sequential() missing 2 required keyword-only arguments:
+   'slc_vrt_stack' and 'output_folder'`. The signature changed in upstream
+   #334 (2024-09-14) and the benchmark still passes `slc_vrt_file` /
+   `ministack_planner`.
+
+Both are fixed on `fix/asv-benchmark-suite` in the dolphin fork; see
+[dolphin-benchmark#11](https://github.com/s-sasaki-earthsea-wizard/dolphin-benchmark/issues/11).
+
+### The asv_runner layer (resolved 2026-08-16)
+
+Item 2 above was **not** what R1/R2/R3 saw. Under asv_runner 0.3.0, the
+benchmark died earlier — in `setup_cache` — because `do_setup_cache`
+(asv#1592 follow-up) ran parameter-free `setup()` hooks *before*
+`setup_cache()`, and this benchmark's `setup` asserts on files that
+`setup_cache` creates. That was
+[asv_runner#52](https://github.com/airspeed-velocity/asv_runner/issues/52),
+fixed by PR #54 and released in 0.3.1.
+
+Verified here by A/B on one image, swapping only `asv_runner`:
+
+```
+# 0.3.0 (pip install --target /tmp/runner030 asv_runner==0.3.0 + PYTHONPATH)
+[50.00%] ··· Setting up benchmarks:177                                   failed
+              AssertionError: No SLC files found: []
+              asv: setup_cache failed (exit status 1)
+
+# 0.3.1
+[50.00%] ··· Setting up benchmarks:177                                       ok
+                 Files: 11   Evicted Pages: 20501 (80M)
+```
+
+The image now pins `asv_runner>=0.3.1` (`docker/Dockerfile`), so the ordering
+bug cannot come back via an unpinned resolve. The benchmark still fails — the
+`TypeError` in item 2 is what's left once the ordering is correct.
 
 ## Caveats on the numbers
 
