@@ -6,8 +6,16 @@
 > reached the **wrong conclusion**: the GPU *was* being used. The flat 69 MiB reading
 > was a measurement artifact, not an idle GPU. Every affected claim below is struck
 > through in place rather than deleted, with a pointer to the verified result — see
-> [Correction: the GPU was used](#correction-the-gpu-was-used). **The py-spy hotspot
-> numbers are unaffected** and stand as written.
+> [Correction: the GPU was used](#correction-the-gpu-was-used). ~~**The py-spy hotspot
+> numbers are unaffected** and stand as written.~~ *(Also corrected — see below.)*
+
+> **⚠️ Correction 2 (2026-08-16).** The `goldstein` "7.6 %" headline is an
+> aggregation artifact — `folded_hotspots.py` summed the totals of *nested* frames,
+> counting single samples up to 3×. The correct total is **2.8 %**, and it is a share
+> of *Python-active sample time*, not wall time. Wall-clock follow-up measurements
+> (`benchmarks/unwrap_breakdown/`) settle the underlying question: `goldstein` +
+> `interpolation` together are **< 0.5 %** of the unwrap step at realistic scale.
+> Details in [Correction 2](#correction-2-goldstein-totals-were-overcounted).
 
 **Question**: are `goldstein` and `calc_ps_block` real hotspots on a realistic
 `dolphin run`, i.e. is it worth porting them to JAX/GPU? If something else
@@ -19,8 +27,10 @@ dominates, redirect.
   top-3 self-time leaves are all I/O.
 - **`calc_ps_block` is negligible (0.8 %)** → porting PS detection is not worth it
   on this workload. **Pivot PR#2.**
-- **`goldstein` is modest but real (7.6 %)** → a JAX port has a single-digit-% wall
-  ceiling. Worth doing as a clean standalone PR, eyes open.
+- ~~**`goldstein` is modest but real (7.6 %)** → a JAX port has a single-digit-% wall
+  ceiling. Worth doing as a clean standalone PR, eyes open.~~
+  *(Overcounted — the correct total is **2.8 %** of Python-active sample time; see
+  [Correction 2](#correction-2-goldstein-totals-were-overcounted).)*
 - ~~**The GPU was never used**: nsys captured zero CUDA kernels and GPU memory stayed
   at 69 MiB even though `gpu_enabled=true`. The whole pipeline ran on CPU. **This is
   the most important follow-up** — the GPU-acceleration premise needs the existing JAX
@@ -87,10 +97,10 @@ regenerated or re-analysed).
 |---|---|
 | ~40 % | **GDAL `ReadAsArray` / `load_gdal`** — raster reads (single biggest cost) |
 | 41.6 % | `read_stack` — SLC stack load for phase linking (overlaps the above) |
-| 26.7 % | unwrap stage (snaphu + goldstein + interpolation) |
-| **7.6 %** | **`goldstein`** (PR#1 candidate) |
-| 6.7 % | snaphu |
-| **0.8 %** | **`calc_ps_block`** (PR#2 candidate) |
+| ~~26.7 %~~ **21.5 %** | unwrap stage (snaphu wrapper + goldstein; *corrected — see [Correction 2](#correction-2-goldstein-totals-were-overcounted)*) |
+| ~~**7.6 %**~~ **2.8 %** | **`goldstein`** (PR#1 candidate; *corrected — nested frames were summed*) |
+| 6.7 % | snaphu — *Python wrapper only: the SNAPHU C subprocess is invisible to py-spy* |
+| **0.8 %** | **`calc_ps_block`** (PR#2 candidate; unaffected by the overcount) |
 | 0.01 % | `estimate_stack_covariance` (already JAX; ~~ran on CPU here~~ *it ran on the GPU — see the [correction](#correction-the-gpu-was-used); its Python-level self time is near-zero either way*) |
 
 ## Interpretation
@@ -101,7 +111,9 @@ regenerated or re-analysed).
 2. **PS detection (PR#2) is a rounding error (0.8 %).** Not worth a JAX port on
    this workload. Revisit only if a PS-heavy config or the standalone `create_ps`
    flow shows otherwise.
-3. **Goldstein (PR#1) is the only candidate with real (if modest) weight (7.6 %)**,
+3. ~~**Goldstein (PR#1) is the only candidate with real (if modest) weight (7.6 %)**~~
+   *(corrected to **2.8 %** — see
+   [Correction 2](#correction-2-goldstein-totals-were-overcounted))*,
    and it only runs because we forced `run_goldstein=true` (default is `false`).
    The FFT (`apply_pspec`) is the accelerable core.
 
@@ -110,7 +122,7 @@ regenerated or re-analysed).
 - I/O dominance is partly environmental: CSLCs on a **NAS** mount, single process.
   Faster storage / more `n_parallel_bursts` / `threads_per_worker` would raise the
   compute fraction.
-- Goldstein's 7.6 % only exists in configs that enable it.
+- Goldstein's ~~7.6 %~~ 2.8 % only exists in configs that enable it.
 
 ## GPU side (nsys) — retracted
 
@@ -206,23 +218,74 @@ should survive — still unmeasured.
 
 ### What this changes, and what it doesn't
 
-**Unchanged** (py-spy measures Python-level wall time and is unaffected by any of
-this): the workload is I/O-bound, `goldstein` is 7.6 %, `calc_ps_block` is 0.8 %.
+**Unchanged** (py-spy measures Python-level sample time and is unaffected by any of
+this): the workload is I/O-bound, ~~`goldstein` is 7.6 %~~ *(later corrected to
+2.8 % — see [Correction 2](#correction-2-goldstein-totals-were-overcounted))*,
+`calc_ps_block` is 0.8 %.
 
 **Changed**: the "New P0" below is **resolved and closed** — the GPU path engages
 normally, so the premise behind the GPU-port work still stands. `goldstein` is
 currently numpy FFT on the CPU during unwrapping, and there is genuine room to move it
-onto the GPU; the modest wall-time ceiling (7.6 %) is a separate matter.
+onto the GPU; the modest wall-time ceiling (~~7.6 %~~ 2.8 %) is a separate matter.
 
 Measurement artifacts: `results/gpu-verify-mem.csv`, `results/gpu_verify_run.sh`
 (regenerable scratch), and `scripts/probe_jax_backend.py` (tracked).
 
+## Correction 2: `goldstein` totals were overcounted
+
+**Date**: 2026-08-16
+
+The candidate totals in this report came from `scripts/folded_hotspots.py`,
+which summed the per-frame *total* counts of every frame whose name matched
+the candidate. For `goldstein` the matched frames are **nested** —
+`goldstein` → `apply_goldstein_filter` → `patch_goldstein_filter` — so a
+single sample with all three on its stack was counted up to three times:
+2.77 % + 1.87 % + 0.74 % + … ≈ 7.6 %.
+
+Counting each sample once (any matched frame on its stack) gives the correct
+subsystem total, which necessarily equals the entry frame's own total:
+
+| candidate | reported | corrected |
+|---|---|---|
+| `goldstein` (total) | 7.6 % | **2.8 %** (274 / 9845 samples; matches `goldstein (goldstein.py:129)` at 2.77 %) |
+| unwrap stage (total) | 26.7 % | **21.5 %** (samples passing through `unwrap/_unwrap.py`) |
+| `calc_ps_block` (total) | 0.8 % | 0.8 % — unchanged: its matched frames are the same function at different lines, mutually exclusive per sample |
+
+`folded_hotspots.py` is fixed alongside this correction (union counting; the
+per-frame breakdown lines were always individually correct and are unchanged).
+The PR#2 pivot call is unaffected.
+
+### Two structural limits of this profile, found while correcting
+
+1. **The denominator is Python-active sample time, not wall time.** 9845
+   samples at 100 Hz ≈ 98 s, against ~13 min of wall: threads blocked on NAS
+   reads or subprocess waits are idle and dropped (py-spy default). Every "%"
+   in this report is a share of that ~98 s, and I/O-heavy stages are
+   *under*-represented in it.
+2. **SNAPHU is invisible.** `snaphu-py` runs the bundled `snaphu` C executable
+   in a subprocess (`snaphu._snaphu.run_snaphu`); the "snaphu 6.7 %" row is
+   Python-side wrapper I/O only. The unwrap step's dominant cost never appears
+   in this profile at all.
+
+Both limits are why the follow-up measured the unwrap step with wall-clock
+timers instead: see `benchmarks/unwrap_breakdown/` (2026-08-16). Headline
+result: at realistic scale (Sentinel-1 burst and NISAR GUNW frame) the unwrap
+step is **98–100 % SNAPHU**, and `goldstein` + `interpolation` together are
+**< 0.5 %** of it — there is no performance case for JAX-porting these two
+stages. The practical levers are SNAPHU tiling (7.4× measured) and enabling
+preprocessing on noisy data (29–34 % faster SNAPHU).
+
 ## Recommendation (go / pivot)
 
 - **PR#2 (PS → JAX): pivot.** 0.8 % ceiling.
-- **PR#1 (Goldstein → JAX): proceed, eyes open.** 7.6 % ceiling, clean and
-  FFT-based — ~~but gated on the GPU actually being used.~~
-  *(That gate is lifted — see the [correction](#correction-the-gpu-was-used).)*
+- ~~**PR#1 (Goldstein → JAX): proceed, eyes open.** 7.6 % ceiling, clean and
+  FFT-based — but gated on the GPU actually being used.~~
+  *(Superseded. The gate concern was lifted by the
+  [GPU correction](#correction-the-gpu-was-used), but the ceiling was
+  overcounted (2.8 %, of Python-active time) and the 2026-08-16 wall-clock
+  breakdown (`benchmarks/unwrap_breakdown/`) puts goldstein at **< 0.5 %** of
+  the unwrap step — **pivot PR#1 as well**. See
+  [Correction 2](#correction-2-goldstein-totals-were-overcounted).)*
 - ~~**New P0: investigate why dolphin ran on CPU despite `gpu_enabled=true`.** This
   outranks both ports.~~
   *(Wrong premise — it didn't run on CPU. Resolved the same day; the verified result
