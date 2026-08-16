@@ -27,6 +27,10 @@ __pycache__/
 # the extracted NISAR rasters next to them stay ignored via the *.tif rule).
 !/results/unwrap-breakdown/
 !/results/unwrap-breakdown/**
+# ...and the asv_runner#52 A/B logs, which are linked from an upstream issue
+# comment and so have to stay reachable at a fixed commit.
+!/results/asv-runner-52-ab/
+!/results/asv-runner-52-ab/**
 
 # ...but curated report artifacts under reports/ ARE tracked, including the flame
 # graph SVG that the global "*.svg" rule above would otherwise drop.
