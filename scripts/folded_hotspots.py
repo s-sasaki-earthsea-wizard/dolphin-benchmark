@@ -26,14 +26,17 @@ from pathlib import Path
 
 
 def parse_folded(path: Path):
-    """Return (self_counts, total_counts, total_samples).
+    """Return (self_counts, total_counts, total_samples, stacks).
 
     Frame labels are normalised to ``function (file:line)`` -> we keep the raw
     py-spy label, which already looks like ``func (path/file.py:123)``.
+    ``stacks`` keeps every (unique_frames, count) pair so callers can compute
+    union counts across several frames without double-counting samples.
     """
     self_counts: dict[str, int] = defaultdict(int)
     total_counts: dict[str, int] = defaultdict(int)
     total_samples = 0
+    stacks: list[tuple[frozenset, int]] = []
 
     with path.open() as fh:
         for line in fh:
@@ -54,10 +57,12 @@ def parse_folded(path: Path):
             self_counts[frames[-1]] += count
             # total == each unique frame in the stack (dedupe per stack so
             # recursion doesn't double-count a single sample).
-            for frame in set(frames):
+            unique = frozenset(frames)
+            stacks.append((unique, count))
+            for frame in unique:
                 total_counts[frame] += count
 
-    return self_counts, total_counts, total_samples
+    return self_counts, total_counts, total_samples, stacks
 
 
 def strip_location(frame: str) -> str:
@@ -81,7 +86,7 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    self_counts, total_counts, total = parse_folded(args.folded)
+    self_counts, total_counts, total, stacks = parse_folded(args.folded)
     if not total:
         raise SystemExit(f"no samples parsed from {args.folded}")
 
@@ -109,13 +114,22 @@ def main() -> None:
             matched_total = {
                 f: c for f, c in total_counts.items() if name in strip_location(f)
             }
+            # self: leaves are exclusive (one per sample), so summing is safe.
             self_sum = sum(matched_self.values())
-            total_sum = sum(matched_total.values())
+            # total: matched frames can be nested (parent + callee in the same
+            # stack), so sum over frames would count one sample several times.
+            # Count each sample once if ANY matched frame appears in its stack.
+            matched_frames = set(matched_total)
+            total_union = sum(
+                count for frames, count in stacks if frames & matched_frames
+            )
             print(
                 f"\n* {name!r}: self={self_sum} "
                 f"({100.0 * self_sum / total:.2f}%)  "
-                f"total={total_sum} ({100.0 * total_sum / total:.2f}%)"
+                f"total={total_union} ({100.0 * total_union / total:.2f}%)"
             )
+            # Per-frame totals below are each correct on their own but overlap
+            # when frames are nested — do not sum this column.
             for f, c in sorted(matched_total.items(), key=lambda kv: kv[1], reverse=True)[:6]:
                 print(f"    total {100.0 * c / total:5.2f}%  {f}")
 
