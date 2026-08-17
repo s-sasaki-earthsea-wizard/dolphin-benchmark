@@ -99,6 +99,40 @@ Two traps that will misread as solver differences if ignored:
    effectively off; `--tophu-downsample` / `--tophu-ntiles` turn it on. Compare
    like for like, or say which is which.
 
+### Parallelism: `--n-parallel-jobs` and `--ww-threads`
+
+Two quantities that a single number cannot express at once. `--n-parallel-jobs`
+sets how many interferograms are unwrapped concurrently
+(`UnwrapOptions.n_parallel_jobs`); the harness default of **1 measures
+single-interferogram latency**, and raising it measures **batch throughput**.
+Optimising one does not optimise the other, so a result is only comparable to
+another at the same setting — `meta.n_parallel_jobs` records it.
+
+`--ww-threads` sets whirlwind's rayon pool
+(`UnwrapOptions.whirlwind_options.num_threads`). The pool is *shared* across
+the concurrent unwraps, so the per-interferogram share is
+`ww_threads / n_parallel_jobs` — the two flags interact and neither alone
+describes how the box is being used.
+
+Three traps:
+
+1. **The harness default is not dolphin's default.** dolphin resolves
+   `n_parallel_jobs = -1` to `max(1, cpu_count // 4)` for whirlwind and to `1`
+   for snaphu/spurt (`_unwrap._resolve_n_parallel_jobs`). The harness pins 1 so
+   that a measurement is a latency measurement unless asked otherwise; pass
+   `--n-parallel-jobs` explicitly to reproduce a production shape.
+2. **An externally-set thread env var wins silently.** dolphin propagates
+   `num_threads` with `os.environ.setdefault("WHIRLWIND_NUM_THREADS", ...)`, so
+   a value already present in the environment (SLURM, `taskset`, a Dockerfile
+   `ENV`) overrides the config and the run reports a pool size it never used.
+   `meta.ww_thread_env` therefore records the *effective*
+   `WHIRLWIND_NUM_THREADS` / `RAYON_NUM_THREADS` after the run — check it
+   rather than trusting the flag.
+3. **`meta.cpu_count` is a count, not a capacity.** On a hybrid CPU (Intel
+   P-core/E-core, ARM big.LITTLE) the Nth thread is not worth the first, so a
+   thread-scaling curve from such a host mixes the algorithm's scaling with the
+   machine's core heterogeneity. Record `lscpu` alongside any scaling claim.
+
 ### Environment: the `unwrap` container, not `dev`
 
 `icu`/`phass` need conda-forge `isce3` (via `tophu`), which has **no Python

@@ -58,6 +58,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -292,6 +293,26 @@ def main() -> None:
         ),
     )
     p.add_argument(
+        "--ww-threads",
+        type=int,
+        default=None,
+        help=(
+            "whirlwind rayon pool size (unwrap_options.whirlwind_options"
+            ".num_threads). Default: ww's own default (all CPUs). The pool is"
+            " shared across --n-parallel-jobs concurrent unwraps."
+        ),
+    )
+    p.add_argument(
+        "--n-parallel-jobs",
+        type=int,
+        default=1,
+        help=(
+            "interferograms unwrapped concurrently. The harness default of 1"
+            " measures single-IG latency; dolphin's own default resolves -1 to"
+            " cpu_count//4 for whirlwind and 1 for snaphu/spurt."
+        ),
+    )
+    p.add_argument(
         "--preproc", choices=["none", "goldstein", "interp", "both"], default="both"
     )
     p.add_argument("-n", "--num-ifgs", type=int, default=3)
@@ -389,8 +410,10 @@ def main() -> None:
         run_goldstein=args.preproc in ("goldstein", "both"),
         run_interpolation=args.preproc in ("interp", "both"),
         unwrap_method=args.method,
-        n_parallel_jobs=1,
+        n_parallel_jobs=args.n_parallel_jobs,
     )
+    if args.ww_threads is not None:
+        opts.whirlwind_options.num_threads = args.ww_threads
     if args.ntiles:
         opts.snaphu_options.ntiles = tuple(args.ntiles)
         opts.snaphu_options.n_parallel_tiles = args.n_parallel_tiles
@@ -473,6 +496,13 @@ def main() -> None:
             "num_threads": num_threads,
             "snaphu_ntiles": list(args.ntiles) if args.ntiles else [1, 1],
             "snaphu_n_parallel_tiles": args.n_parallel_tiles,
+            "n_parallel_jobs": args.n_parallel_jobs,
+            "ww_threads_requested": args.ww_threads,
+            "ww_thread_env": {
+                k: os.environ.get(k)
+                for k in ("WHIRLWIND_NUM_THREADS", "RAYON_NUM_THREADS")
+            },
+            "cpu_count": os.cpu_count(),
             "inputs_on_local_disk": not args.no_copy_local,
             "dolphin_commit": commit,
             "numpy": numpy.__version__,
