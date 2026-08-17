@@ -63,6 +63,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -85,9 +86,22 @@ try:
 finally:
     sys.argv = _REAL_ARGV
 
+# `list.append` is atomic under the GIL, so the record sink can be shared.
 RECORDS: list[dict] = []
-CURRENT: dict = {"ifg": None}
-_STACK: list[str] = []
+
+# The nesting stack and the current interferogram label must NOT be shared:
+# dolphin runs `--n-parallel-jobs > 1` on a ThreadPoolExecutor, so several
+# `unwrap()` calls are in flight at once. A module-level stack would have each
+# thread popping frames pushed by another, mislabelling `within` (and with it
+# every stage the summary reads) and attributing records to the wrong ifg.
+_TLS = threading.local()
+
+
+def _stack() -> list[str]:
+    stack = getattr(_TLS, "stack", None)
+    if stack is None:
+        stack = _TLS.stack = []
+    return stack
 
 # Stages summed in the summary table. Everything else under "total" becomes
 # "other" (scratch cleanup, intermediate moves, mask handling, ...).
@@ -135,18 +149,19 @@ def _import_with_clean_argv(name: str):
 
 def _timed(func, stage: str):
     def wrapper(*args, **kwargs):
-        _STACK.append(stage)
+        stack = _stack()
+        stack.append(stage)
         t0 = time.perf_counter()
         try:
             return func(*args, **kwargs)
         finally:
             dt = time.perf_counter() - t0
-            _STACK.pop()
+            stack.pop()
             RECORDS.append(
                 {
-                    "ifg": CURRENT["ifg"],
+                    "ifg": getattr(_TLS, "ifg", None),
                     "stage": stage,
-                    "within": _STACK[-1] if _STACK else None,
+                    "within": stack[-1] if stack else None,
                     "seconds": dt,
                 }
             )
@@ -177,18 +192,24 @@ def install_probes() -> None:
     orig_unwrap = unwrap_mod.unwrap
 
     def unwrap_with_label(*args, **kwargs):
-        CURRENT["ifg"] = Path(kwargs["ifg_filename"]).name
-        _STACK.append("total")
+        _TLS.ifg = Path(kwargs["ifg_filename"]).name
+        stack = _stack()
+        stack.append("total")
         t0 = time.perf_counter()
         try:
             return orig_unwrap(*args, **kwargs)
         finally:
             dt = time.perf_counter() - t0
-            _STACK.pop()
+            stack.pop()
             RECORDS.append(
-                {"ifg": CURRENT["ifg"], "stage": "total", "within": None, "seconds": dt}
+                {
+                    "ifg": getattr(_TLS, "ifg", None),
+                    "stage": "total",
+                    "within": None,
+                    "seconds": dt,
+                }
             )
-            CURRENT["ifg"] = None
+            _TLS.ifg = None
 
     unwrap_mod.unwrap = unwrap_with_label
 
