@@ -1,5 +1,10 @@
 # Unwrap-step wall-clock breakdown
 
+> Part of an [independent, unofficial repository](../../README.md) — not affiliated
+> with or endorsed by the dolphin project, isce-framework, or the authors of any
+> other software measured here. Single machine, one operator's data; read every
+> figure as one measurement from one setup.
+
 **Question**: within dolphin's unwrap step, how is wall time split between the
 preprocessing stages (`goldstein.py`, `interpolation.py` — both candidates for
 JAX ports), the SNAPHU core, and post-processing? This decides where (and

@@ -1,5 +1,21 @@
 # dolphin-benchmark
 
+> **Independent and unofficial.** This is one person's working repository. It is not
+> affiliated with, endorsed by, reviewed by, or connected to the dolphin project,
+> [isce-framework](https://github.com/isce-framework), JPL, or NASA — nor to any other
+> project whose software is run here. Nothing in it is an official benchmark of anything.
+>
+> Every number was produced on a single machine, with one operator's own data and
+> configuration choices, to answer a local question: *what should I run on my own
+> hardware?* Host CPU, scene content, and library versions all move these numbers, so
+> please read any figure as one measurement from one setup, not as a property of the
+> software.
+>
+> Where third-party software is measured, the question being asked is "is this usable
+> for my workflow?" — never "which project is faster." These are not competitive
+> benchmarks and are not intended to anticipate or substitute for results the authors
+> of that software publish themselves.
+
 A sibling repository for benchmarking and experimentation targeting GPU acceleration PRs against
 [dolphin](https://github.com/isce-framework/dolphin).
 
