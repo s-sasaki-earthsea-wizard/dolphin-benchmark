@@ -44,7 +44,7 @@ services:
     # are safe. .env is git-ignored; do not commit it.
     env_file:
       - ../.env
-    volumes:
+    volumes: &common_volumes
       # dolphin source (rw, for `pip install -e .` and source edits).
       - "${DOLPHIN_SRC:-../..}:/dolphin:rw"
       # this benchmark repo (rw, for results and scratch).
@@ -79,6 +79,45 @@ services:
         echo &&
         nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | sed 's/^/GPU: /' &&
         python -c 'import jax; print(\"JAX backend:\", jax.default_backend(), \"devices:\", jax.devices())' &&
+        exec bash -l
+      "
+
+  # Unwrapper comparison (issue #13): SNAPHU vs ICU/PHASS vs whirlwind.
+  #
+  # A derived image rather than a variant of `dev`, because the comparison
+  # needs conda-forge `isce3` (via `tophu`) and isce3 has no Python 3.14
+  # build, while dolphin-env is on 3.14. Rationale in Dockerfile.unwrap.
+  # GPU passthrough is kept only because conda-forge ships isce3 as a CUDA
+  # build — no unwrapper measured here has a GPU path.
+  unwrap:
+    image: dolphin-benchmark:unwrap
+    hostname: dolphin-bench
+    build:
+      context: .
+      dockerfile: Dockerfile.unwrap
+      args:
+        BASE_IMAGE: dolphin-benchmark:gpu
+    cap_add:
+      - SYS_PTRACE
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    env_file:
+      - ../.env
+    volumes: *common_volumes
+    working_dir: /work
+    tty: true
+    stdin_open: true
+    command: >
+      bash -lc "
+        pip install --no-deps --quiet -e /dolphin &&
+        echo '--- unwrapper comparison shell (issue #13) ---' &&
+        echo 'conda env:      unwrap-cmp' &&
+        cat /opt/conda/unwrap-solver-info.txt &&
         exec bash -l
       "
 

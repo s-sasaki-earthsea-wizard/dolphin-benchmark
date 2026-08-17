@@ -1,0 +1,77 @@
+# Unwrapper-comparison image (dolphin-benchmark issue #13).
+#
+# Adds a second conda env, `unwrap-cmp`, alongside the `dolphin-env` of the
+# base image. The base image is reused rather than rebuilt so the ~24 GB of
+# CUDA/conda layers stay shared.
+#
+# Why a separate env at all — two independent walls, both discovered while
+# scoping #13:
+#
+#   1. conda-forge `isce3` (needed by `tophu` for ICU/PHASS) has no Python
+#      3.14 build, and `dolphin-env` is on 3.14.6. The solve fails outright.
+#   2. `dolphin-env` backs the ASV baselines in results/asv-baseline/.
+#      Mutating it would silently invalidate them.
+#
+# A third wall — "whirlwind needs a C++20 toolchain and cmake<4" — turned out
+# not to exist: that applied to `isce-framework/whirlwind`, which is the wrong
+# package. dolphin targets `whirlwind-insar`, a Rust build shipping wheels and
+# a conda-forge package. See the note in unwrap-env.yml.
+#
+# Build:
+#   make build-unwrap          # or: docker compose --env-file ../.env build unwrap
+#
+# The base image must exist first (`make build`).
+
+ARG BASE_IMAGE=dolphin-benchmark:gpu
+FROM ${BASE_IMAGE}
+
+LABEL org.opencontainers.image.description="Unwrapper comparison environment (SNAPHU / ICU / PHASS / whirlwind) for isce-framework/dolphin"
+
+# Must match the base image's runtime user (docker/Dockerfile ARG USERNAME).
+ARG USERNAME=dolphin
+
+# --- the unwrap-cmp env -----------------------------------------------------
+COPY --chown=${USERNAME}:${USERNAME} unwrap-env.yml /tmp/unwrap-env.yml
+RUN micromamba create -n unwrap-cmp -y -f /tmp/unwrap-env.yml \
+    && micromamba clean --all --yes
+
+# snaphu-py supplies BOTH the SNAPHU baseline and the raster I/O helpers that
+# dolphin's whirlwind adapter uses (`snaphu.io.Raster`), so it is needed even
+# for the non-SNAPHU methods. jax is CPU-only here on purpose: no unwrapper in
+# this comparison has a GPU path (isce3 has no `cuda/unwrap` module), and it is
+# installed only so that incidental `dolphin` imports cannot fail.
+RUN micromamba run -n unwrap-cmp pip install --no-cache-dir \
+        snaphu \
+        jax
+
+# --- record what the env actually resolved to -------------------------------
+# The solver versions decide what any later measurement means, so pin them to
+# a file rather than re-deriving them from a running container. It lands under
+# /opt/conda rather than /opt because only /opt/conda is owned by the runtime
+# user in the base image.
+RUN micromamba run -n unwrap-cmp python -c "import sys, importlib; print('# solver provenance (image: dolphin-benchmark:unwrap)'); [print('{:<20}{}'.format(m, getattr(importlib.import_module(m), '__version__', 'unknown'))) for m in ('whirlwind', 'isce3', 'tophu', 'snaphu', 'numpy')]; print('{:<20}{}'.format('python', sys.version.split()[0]))" > /opt/conda/unwrap-solver-info.txt \
+    && cat /opt/conda/unwrap-solver-info.txt
+
+# --- make unwrap-cmp the default env in THIS image --------------------------
+# The base image points PATH and the GDAL/PROJ data dirs at dolphin-env; both
+# have to move, or libgdal opens the wrong PROJ database (see the base
+# Dockerfile's note on the missing activate.d hooks).
+ENV PATH=/opt/conda/envs/unwrap-cmp/bin:/opt/conda/bin:/usr/local/cuda/bin:$PATH
+ENV CONDA_DEFAULT_ENV=unwrap-cmp
+ENV PROJ_DATA=/opt/conda/envs/unwrap-cmp/share/proj \
+    PROJ_LIB=/opt/conda/envs/unwrap-cmp/share/proj \
+    GDAL_DATA=/opt/conda/envs/unwrap-cmp/share/gdal
+
+# tophu's SnaphuUnwrap hands isce3 an in-memory array via GDAL's
+# `MEM:::DATAPOINTER=` syntax. Recent GDAL refuses to open those by default
+# (it dereferences a caller-supplied pointer), so the call dies with
+# "unable to open GDAL dataset 'MEM:::DATAPOINTER=...'". ICU and PHASS take a
+# different path and are unaffected. Re-enabled here because the pointers are
+# our own arrays inside a single-purpose container.
+ENV GDAL_MEM_ENABLE_OPEN=YES
+
+RUN sed -i 's/micromamba activate dolphin-env/micromamba activate unwrap-cmp/' \
+        /home/${USERNAME}/.bashrc
+
+WORKDIR /work
+CMD ["bash", "-l"]
