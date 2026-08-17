@@ -66,9 +66,79 @@ interferograms at strides x=6/y=3.
   done'
 ```
 
-Outputs land in `results/unwrap-breakdown/breakdown-<mode>.json` (summary +
-per-call records; the first `interpolate` call includes numba JIT compilation,
-visible in the per-ifg records).
+Outputs land in `results/unwrap-breakdown/breakdown-<label>-<method>-<mode>.json`
+(summary + per-call records; the first `interpolate` call includes numba JIT
+compilation, visible in the per-ifg records).
+
+## Comparing unwrappers (`--method`, issue #13)
+
+`--method {snaphu,icu,phass,whirlwind}` selects `unwrap_options.unwrap_method`.
+The solver stage differs per method and is named in the result JSON's
+`meta.solver_stage`:
+
+| `--method` | timed stage | what the stage covers |
+|---|---|---|
+| `snaphu` | `snaphu` | the SNAPHU C subprocess + snaphu-py's raster I/O |
+| `icu`, `phass` | `tophu` | tophu's downsample / tiling / upsample **around** the isce3 solver |
+| `whirlwind` | `whirlwind` | the native MCF solve + array marshalling |
+
+`meta` additionally records `method`, `method_options` (the matching
+`UnwrapOptions` sub-model), `solver_versions` for every solver importable in
+the env, and `solver_info` (the image's resolved solver stack) — so a run stays
+self-describing without reference to the invoking command.
+
+Two traps that will misread as solver differences if ignored:
+
+1. **The SNAPHU regrow is not solver-specific.** `_unwrap.py` calls
+   `grow_conncomp_snaphu` whenever goldstein or interpolation ran, regardless
+   of `unwrap_method`. An `icu` run with `--preproc both` therefore still
+   contains a SNAPHU invocation (visible as the `conncomp_regrow` stage). Use
+   `--preproc none` for a SNAPHU-free measurement of the alternatives.
+2. **`tophu` is an adapter total, not a solver core.** dolphin's default
+   `tophu_options.downsample_factor` is `(1, 1)`, i.e. the multiscale path is
+   effectively off; `--tophu-downsample` / `--tophu-ntiles` turn it on. Compare
+   like for like, or say which is which.
+
+### Environment: the `unwrap` container, not `dev`
+
+`icu`/`phass` need conda-forge `isce3` (via `tophu`), which has **no Python
+3.14 build** — and `dolphin-env` is on 3.14.6, so the solve fails outright.
+That alone forces a separate image and env (`unwrap-cmp`, Python 3.13) built
+by `docker/Dockerfile.unwrap`; `whirlwind-insar` then installs into it from
+conda-forge like anything else:
+
+```bash
+make build-unwrap
+SERVICE=unwrap ./docker/run.sh 'pip install --no-deps --quiet -e /dolphin && \
+  python /dolphin-benchmark/benchmarks/unwrap_breakdown/profile_unwrap.py \
+    --work /work/run-full --method phass --preproc none -n 2 \
+    --out /work/unwrap-comparison'
+```
+
+The env differs from the one behind the Tier 1/2 tables above, so SNAPHU was
+re-measured inside this image before trusting any cross-method comparison. It
+landed at **339.66 s** on the S1 burst (single ifg, `--preproc none`), inside
+the 313–428 s spread of the Tier 1 table — SNAPHU is an external C subprocess
+and is insensitive to the Python stack around it. The Tier 1/2 numbers above
+therefore carry over.
+
+> **`whirlwind` runs through dolphin — the package is `whirlwind-insar`.**
+> An earlier draft of this file concluded that dolphin targeted an unpublished
+> whirlwind, after finding that `isce-framework/whirlwind` (main frozen at
+> `dce837b5`, 2024-10-29) exposes only
+> `unwrap(igram, corr, nlooks, *, mask=None) -> ndarray` while dolphin's
+> `unwrap/_whirlwind.py` passes eleven further keyword arguments and unpacks
+> `(unw, conncomp)`.
+>
+> The diagnosis was right and the conclusion was wrong: the package dolphin
+> targets is [`whirlwind-insar`](https://github.com/scottstanie/whirlwind-insar),
+> a Rust reimplementation that also imports as `whirlwind`, published on PyPI
+> and conda-forge since 2026-06-10. Its 0.9.0 signature matches dolphin kwarg
+> for kwarg. The maintainer pointed this out on dolphin-benchmark#13; a paper
+> explaining the split between the two implementations is forthcoming.
+>
+> `benchmarks/unwrap_comparison/smoke_solvers.py` verifies both the direct call
+> and dolphin's `unwrap_whirlwind` wrapper on synthetic data.
 
 ## Results
 
