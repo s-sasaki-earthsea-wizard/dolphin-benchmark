@@ -1,5 +1,10 @@
 # Unwrap-step wall-clock breakdown
 
+> Part of an [independent, unofficial repository](../../README.md) — not affiliated
+> with or endorsed by the dolphin project, isce-framework, or the authors of any
+> other software measured here. Single machine, one operator's data; read every
+> figure as one measurement from one setup.
+
 **Question**: within dolphin's unwrap step, how is wall time split between the
 preprocessing stages (`goldstein.py`, `interpolation.py` — both candidates for
 JAX ports), the SNAPHU core, and post-processing? This decides where (and
@@ -66,9 +71,113 @@ interferograms at strides x=6/y=3.
   done'
 ```
 
-Outputs land in `results/unwrap-breakdown/breakdown-<mode>.json` (summary +
-per-call records; the first `interpolate` call includes numba JIT compilation,
-visible in the per-ifg records).
+Outputs land in `results/unwrap-breakdown/breakdown-<label>-<method>-<mode>.json`
+(summary + per-call records; the first `interpolate` call includes numba JIT
+compilation, visible in the per-ifg records).
+
+## Comparing unwrappers (`--method`, issue #13)
+
+`--method {snaphu,icu,phass,whirlwind}` selects `unwrap_options.unwrap_method`.
+The solver stage differs per method and is named in the result JSON's
+`meta.solver_stage`:
+
+| `--method` | timed stage | what the stage covers |
+|---|---|---|
+| `snaphu` | `snaphu` | the SNAPHU C subprocess + snaphu-py's raster I/O |
+| `icu`, `phass` | `tophu` | tophu's downsample / tiling / upsample **around** the isce3 solver |
+| `whirlwind` | `whirlwind` | the native MCF solve + array marshalling |
+
+`meta` additionally records `method`, `method_options` (the matching
+`UnwrapOptions` sub-model), `solver_versions` for every solver importable in
+the env, and `solver_info` (the image's resolved solver stack) — so a run stays
+self-describing without reference to the invoking command.
+
+Two traps that will misread as solver differences if ignored:
+
+1. **The SNAPHU regrow is not solver-specific.** `_unwrap.py` calls
+   `grow_conncomp_snaphu` whenever goldstein or interpolation ran, regardless
+   of `unwrap_method`. An `icu` run with `--preproc both` therefore still
+   contains a SNAPHU invocation (visible as the `conncomp_regrow` stage). Use
+   `--preproc none` for a SNAPHU-free measurement of the alternatives.
+2. **`tophu` is an adapter total, not a solver core.** dolphin's default
+   `tophu_options.downsample_factor` is `(1, 1)`, i.e. the multiscale path is
+   effectively off; `--tophu-downsample` / `--tophu-ntiles` turn it on. Compare
+   like for like, or say which is which.
+
+### Parallelism: `--n-parallel-jobs` and `--ww-threads`
+
+Two quantities that a single number cannot express at once. `--n-parallel-jobs`
+sets how many interferograms are unwrapped concurrently
+(`UnwrapOptions.n_parallel_jobs`); the harness default of **1 measures
+single-interferogram latency**, and raising it measures **batch throughput**.
+Optimising one does not optimise the other, so a result is only comparable to
+another at the same setting — `meta.n_parallel_jobs` records it.
+
+`--ww-threads` sets whirlwind's rayon pool
+(`UnwrapOptions.whirlwind_options.num_threads`). The pool is *shared* across
+the concurrent unwraps, so the per-interferogram share is
+`ww_threads / n_parallel_jobs` — the two flags interact and neither alone
+describes how the box is being used.
+
+Three traps:
+
+1. **The harness default is not dolphin's default.** dolphin resolves
+   `n_parallel_jobs = -1` to `max(1, cpu_count // 4)` for whirlwind and to `1`
+   for snaphu/spurt (`_unwrap._resolve_n_parallel_jobs`). The harness pins 1 so
+   that a measurement is a latency measurement unless asked otherwise; pass
+   `--n-parallel-jobs` explicitly to reproduce a production shape.
+2. **An externally-set thread env var wins silently.** dolphin propagates
+   `num_threads` with `os.environ.setdefault("WHIRLWIND_NUM_THREADS", ...)`, so
+   a value already present in the environment (SLURM, `taskset`, a Dockerfile
+   `ENV`) overrides the config and the run reports a pool size it never used.
+   `meta.ww_thread_env` therefore records the *effective*
+   `WHIRLWIND_NUM_THREADS` / `RAYON_NUM_THREADS` after the run — check it
+   rather than trusting the flag.
+3. **`meta.cpu_count` is a count, not a capacity.** On a hybrid CPU (Intel
+   P-core/E-core, ARM big.LITTLE) the Nth thread is not worth the first, so a
+   thread-scaling curve from such a host mixes the algorithm's scaling with the
+   machine's core heterogeneity. Record `lscpu` alongside any scaling claim.
+
+### Environment: the `unwrap` container, not `dev`
+
+`icu`/`phass` need conda-forge `isce3` (via `tophu`), which has **no Python
+3.14 build** — and `dolphin-env` is on 3.14.6, so the solve fails outright.
+That alone forces a separate image and env (`unwrap-cmp`, Python 3.13) built
+by `docker/Dockerfile.unwrap`; `whirlwind-insar` then installs into it from
+conda-forge like anything else:
+
+```bash
+make build-unwrap
+SERVICE=unwrap ./docker/run.sh 'pip install --no-deps --quiet -e /dolphin && \
+  python /dolphin-benchmark/benchmarks/unwrap_breakdown/profile_unwrap.py \
+    --work /work/run-full --method phass --preproc none -n 2 \
+    --out /work/unwrap-comparison'
+```
+
+The env differs from the one behind the Tier 1/2 tables above, so SNAPHU was
+re-measured inside this image before trusting any cross-method comparison. It
+landed at **339.66 s** on the S1 burst (single ifg, `--preproc none`), inside
+the 313–428 s spread of the Tier 1 table — SNAPHU is an external C subprocess
+and is insensitive to the Python stack around it. The Tier 1/2 numbers above
+therefore carry over.
+
+> **`whirlwind` runs through dolphin — the package is `whirlwind-insar`.**
+> An earlier draft of this file concluded that dolphin targeted an unpublished
+> whirlwind, after finding that `isce-framework/whirlwind` (main frozen at
+> `dce837b5`, 2024-10-29) exposes only
+> `unwrap(igram, corr, nlooks, *, mask=None) -> ndarray` while dolphin's
+> `unwrap/_whirlwind.py` passes eleven further keyword arguments and unpacks
+> `(unw, conncomp)`.
+>
+> The diagnosis was right and the conclusion was wrong: the package dolphin
+> targets is [`whirlwind-insar`](https://github.com/scottstanie/whirlwind-insar),
+> a Rust reimplementation that also imports as `whirlwind`, published on PyPI
+> and conda-forge since 2026-06-10. Its 0.9.0 signature matches dolphin kwarg
+> for kwarg. The maintainer pointed this out on dolphin-benchmark#13; a paper
+> explaining the split between the two implementations is forthcoming.
+>
+> `benchmarks/unwrap_comparison/smoke_solvers.py` verifies both the direct call
+> and dolphin's `unwrap_whirlwind` wrapper on synthetic data.
 
 ## Results
 
@@ -121,24 +230,45 @@ Takeaways:
 
 1. **SNAPHU dominance holds at frame scale** (98.5–99.9 %), and the absolute
    cost balloons: ~49 min per frame single-tile.
-2. **Preprocessing pays for itself ~50× over on noisy L-band data**: with
-   Goldstein + interpolation enabled, SNAPHU ran 29–34 % faster on both
-   interferograms (smoother phase → easier optimization), cutting ~15 min
-   from ~49 min — while the preprocessing itself costs 15 s. (This is a
-   *configuration* insight, not an argument for accelerating the stages.)
+2. **Preprocessing paid for itself ~50× over here — but only single-tile.**
+   With Goldstein + interpolation enabled, SNAPHU ran 29–34 % faster on both
+   interferograms (smoother phase → easier optimization), cutting ~15 min from
+   ~49 min while the preprocessing itself cost 15 s. That ratio belongs to the
+   *configuration*, not to preprocessing. Re-measured on the same frames at
+   `ntiles=[8,8]` / `n_parallel_tiles=4` / `n_parallel_jobs=4`, SNAPHU still
+   ran 21 % faster with preprocessing on — but the 93 s saved across three
+   frames was almost exactly spent again: goldstein 38 s, interpolation 11 s,
+   the conncomp regrow that enabling preprocessing forces (18 s — trap 1
+   above), and extra I/O, leaving end-to-end wall time within 0–2 % of
+   `none`. The cost is roughly fixed per frame; the SNAPHU time it saves is
+   not, and tiling shrank the latter by more than an order of magnitude.
+   **Re-measure before assuming it pays in your own configuration.**
 3. Even with far more masked pixels to fill (73 % invalid + low coherence),
    interpolation stays at 10.5 s single-threaded — 0.5 % of the step.
 4. **SNAPHU tiling is the real wall-time lever: 7.4× on the same
    interferogram** (2635 s → 354 s with `ntiles=[3,3]`,
-   `n_parallel_tiles=4`) — configuration dolphin already exposes.
+   `n_parallel_tiles=4`) — configuration dolphin already exposes. 7.4× is the
+   measured point, not a ceiling: finer tilings went considerably further on
+   this frame before overhead took over.
+
+> **Read these as one worked example, not as figures to plan against.** Every
+> number on this page came off a single machine, with one operator's data and
+> one set of configuration choices, and none of it is official. Host CPU,
+> scene content, tiling, thread and job counts, and library versions all move
+> these ratios — sometimes enough to reverse a recommendation, as takeaway 2
+> shows. Nothing here guarantees the same result in another environment;
+> re-measure anything you intend to rely on.
 
 ### Conclusion
 
 Across both datasets the unwrap step is 98–100 % SNAPHU (an external C
 subprocess). JAX-porting the Python-side stages (`goldstein.py`,
 `interpolation.py`) would shave **< 0.5 %** off the step in every measured
-configuration; the practical levers are SNAPHU tiling/parallelism (already
-exposed by dolphin's config) and preprocessing-as-configuration on noisy
-data. Any acceleration effort aimed at wall time should target the SNAPHU
-side (tiling defaults, docs) or alternative unwrappers, not the Python
-stages.
+configuration. The practical lever is SNAPHU tiling and parallelism, already
+exposed by dolphin's config. Preprocessing-as-configuration is a second one,
+but a conditional one — it repaid its cost many times over single-tile and
+roughly broke even once tiling had cut SNAPHU down (takeaway 2), so it has to
+be measured against the configuration actually in use rather than adopted on
+the single-tile figure. Any acceleration effort aimed at wall time should
+target the SNAPHU side (tiling defaults, docs) or alternative unwrappers, not
+the Python stages.

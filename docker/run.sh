@@ -13,6 +13,10 @@
 #
 # Override paths ad-hoc with shell exports if needed, e.g.
 #   DOLPHIN_SRC=/other/clone ./run.sh
+#
+# SERVICE selects the compose service (default `dev`). The unwrapper
+# comparison of issue #13 lives in a second service with its own env:
+#   SERVICE=unwrap ./run.sh python -c 'import tophu; print(tophu.__version__)'
 
 set -euo pipefail
 
@@ -31,9 +35,10 @@ export GROUP_ID="${GROUP_ID:-$(id -g)}"
 # --env-file makes the same .env feed BOTH compose-time path substitution
 # AND the container's runtime environment.
 COMPOSE=(docker compose --env-file ../.env)
+SERVICE="${SERVICE:-dev}"
 
 if [[ $# -eq 0 ]]; then
-    exec "${COMPOSE[@]}" run --rm dev
+    exec "${COMPOSE[@]}" run --rm "${SERVICE}"
 else
-    exec "${COMPOSE[@]}" run --rm dev bash -lc "$*"
+    exec "${COMPOSE[@]}" run --rm "${SERVICE}" bash -lc "$*"
 fi

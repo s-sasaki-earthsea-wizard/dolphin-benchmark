@@ -16,19 +16,30 @@ help:  ## Show this help.
 # Container lifecycle
 # ---------------------------------------------------------------------------
 
+# `dev` is named explicitly: the unwrap service (issue #13) builds FROM the
+# dev image, and compose has no notion of that ordering.
 .PHONY: build
 build:  ## Build the GPU dev image.
 	cd docker && export USER_ID=$$(id -u) GROUP_ID=$$(id -g) && \
-		docker compose --env-file ../.env build
+		docker compose --env-file ../.env build dev
 
 .PHONY: rebuild
 rebuild:  ## Rebuild the image from scratch (no cache).
 	cd docker && export USER_ID=$$(id -u) GROUP_ID=$$(id -g) && \
-		docker compose --env-file ../.env build --no-cache
+		docker compose --env-file ../.env build --no-cache dev
+
+.PHONY: build-unwrap
+build-unwrap: build  ## Build the unwrapper-comparison image (isce3/tophu + whirlwind).
+	cd docker && export USER_ID=$$(id -u) GROUP_ID=$$(id -g) && \
+		docker compose --env-file ../.env build unwrap
 
 .PHONY: shell
 shell:  ## Interactive shell inside the dev container.
 	$(RUN)
+
+.PHONY: shell-unwrap
+shell-unwrap:  ## Interactive shell inside the unwrapper-comparison container.
+	SERVICE=unwrap $(RUN)
 
 # ---------------------------------------------------------------------------
 # CSLC tutorial data
