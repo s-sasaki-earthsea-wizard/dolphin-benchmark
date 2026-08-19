@@ -230,24 +230,45 @@ Takeaways:
 
 1. **SNAPHU dominance holds at frame scale** (98.5–99.9 %), and the absolute
    cost balloons: ~49 min per frame single-tile.
-2. **Preprocessing pays for itself ~50× over on noisy L-band data**: with
-   Goldstein + interpolation enabled, SNAPHU ran 29–34 % faster on both
-   interferograms (smoother phase → easier optimization), cutting ~15 min
-   from ~49 min — while the preprocessing itself costs 15 s. (This is a
-   *configuration* insight, not an argument for accelerating the stages.)
+2. **Preprocessing paid for itself ~50× over here — but only single-tile.**
+   With Goldstein + interpolation enabled, SNAPHU ran 29–34 % faster on both
+   interferograms (smoother phase → easier optimization), cutting ~15 min from
+   ~49 min while the preprocessing itself cost 15 s. That ratio belongs to the
+   *configuration*, not to preprocessing. Re-measured on the same frames at
+   `ntiles=[8,8]` / `n_parallel_tiles=4` / `n_parallel_jobs=4`, SNAPHU still
+   ran 21 % faster with preprocessing on — but the 93 s saved across three
+   frames was almost exactly spent again: goldstein 38 s, interpolation 11 s,
+   the conncomp regrow that enabling preprocessing forces (18 s — trap 1
+   above), and extra I/O, leaving end-to-end wall time within 0–2 % of
+   `none`. The cost is roughly fixed per frame; the SNAPHU time it saves is
+   not, and tiling shrank the latter by more than an order of magnitude.
+   **Re-measure before assuming it pays in your own configuration.**
 3. Even with far more masked pixels to fill (73 % invalid + low coherence),
    interpolation stays at 10.5 s single-threaded — 0.5 % of the step.
 4. **SNAPHU tiling is the real wall-time lever: 7.4× on the same
    interferogram** (2635 s → 354 s with `ntiles=[3,3]`,
-   `n_parallel_tiles=4`) — configuration dolphin already exposes.
+   `n_parallel_tiles=4`) — configuration dolphin already exposes. 7.4× is the
+   measured point, not a ceiling: finer tilings went considerably further on
+   this frame before overhead took over.
+
+> **Read these as one worked example, not as figures to plan against.** Every
+> number on this page came off a single machine, with one operator's data and
+> one set of configuration choices, and none of it is official. Host CPU,
+> scene content, tiling, thread and job counts, and library versions all move
+> these ratios — sometimes enough to reverse a recommendation, as takeaway 2
+> shows. Nothing here guarantees the same result in another environment;
+> re-measure anything you intend to rely on.
 
 ### Conclusion
 
 Across both datasets the unwrap step is 98–100 % SNAPHU (an external C
 subprocess). JAX-porting the Python-side stages (`goldstein.py`,
 `interpolation.py`) would shave **< 0.5 %** off the step in every measured
-configuration; the practical levers are SNAPHU tiling/parallelism (already
-exposed by dolphin's config) and preprocessing-as-configuration on noisy
-data. Any acceleration effort aimed at wall time should target the SNAPHU
-side (tiling defaults, docs) or alternative unwrappers, not the Python
-stages.
+configuration. The practical lever is SNAPHU tiling and parallelism, already
+exposed by dolphin's config. Preprocessing-as-configuration is a second one,
+but a conditional one — it repaid its cost many times over single-tile and
+roughly broke even once tiling had cut SNAPHU down (takeaway 2), so it has to
+be measured against the configuration actually in use rather than adopted on
+the single-tile figure. Any acceleration effort aimed at wall time should
+target the SNAPHU side (tiling defaults, docs) or alternative unwrappers, not
+the Python stages.
